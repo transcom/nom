@@ -219,6 +219,7 @@ Paygrades E-1 through E-3 can also have a rating abbreviation preceding their pa
 ### Officer Ranks
 | Abbreviation | Title | DoD Pay Grade |
 | ------------ | ----- | ------------- |
+| OC | Officer Candidate | E-5 |
 | ENS | Ensign | O-1 |
 | LTJG | Lieutenant Junior Grade | O-2 |
 | LT | Lieutenant | O-3 |
@@ -226,7 +227,7 @@ Paygrades E-1 through E-3 can also have a rating abbreviation preceding their pa
 | CDR | Commander | O-5	|
 | CAPT | Captain | O-6 |
 | RDML | Rear Admiral (lower half) | O-7 |
-| RADM | Rear Admiral (upper half) | O-8 |
+| RDMU | Rear Admiral (upper half) | O-8 |
 | VADM | Vice Admiral | O-9 |
 | ADM | Admiral | O-10 |
 

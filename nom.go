@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
-	"strings"
+	"time"
 
 	"github.com/transcom/nom/pkg/swagger"
 )
@@ -91,10 +93,22 @@ func main() {
 			os.Exit(1)
 		}
 
-		ssn := record[fields["EMPLID"]]
-		orderCntlNbr := record[fields["N_ORDER_CNTL_NBR"]]
+		var rev swagger.Revision
+		affiliation := swagger.NAVY
+		rev.Member = new(swagger.Member)
+		rev.Member.Affiliation = &affiliation
+		// The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix)
+		// TODO - when we get appropriately formatted files, parse the name into its components
+		rev.Member.FamilyName = record[fields["NAME"]]
+
+		//ssn := record[fields["EMPLID"]]
+		//orderCntlNbr := record[fields["N_ORDER_CNTL_NBR"]]
 		// TODO construct new orders num by converting SSN to EDIPI, then combining that with the order_cntl_nbr expanded into the julian date concatenated with the 4 digit year
-		ordersDate := record[fields["N_ORD_DT"]]
+
+		const usaDate = "1/2/06"
+		d, _ := time.Parse(usaDate, record[fields["N_ORD_DT"]])
+		rev.DateIssued = d
+
 		modNbr, modNbrErr := strconv.Atoi(record[fields["N_MOD_NBR"]])
 		if modNbrErr != nil {
 			modNbr = 0
@@ -103,17 +117,18 @@ func main() {
 		if modNumErr != nil {
 			modNum = 0
 		}
-		seqNum := modNbr + modNum
+		rev.SeqNum = int32(modNbr + modNum)
 
-		var status string
 		if record[fields["N_OBLG_STATUS"]] == "D" {
-			status = "canceled"
+			rev.Status = "canceled"
 		} else {
-			status = "authorized"
+			rev.Status = "authorized"
 		}
-		// TODO understand TDY en route with the N_OBLG_LEG_NBR field
 		rateRank := record[fields["N_RATE_RANK"]]
 		rank := RankFromAbbreviation(rateRank)
+		paygrade := rank.paygrade
+		rev.Member.Title = rank.title
+		rev.Member.Rank = &paygrade
 
 		purpose := record[fields["N_CIC_PURP"]]
 		var ordersType swagger.OrdersType
@@ -122,49 +137,48 @@ func main() {
 		} else {
 			ordersType = enlistedOrdersTypes[purpose]
 		}
+		rev.OrdersType = &ordersType
 
-		// The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix)
-		name := record[fields["NAME"]]
+		rev.LosingUnit = new(swagger.Unit)
+		rev.LosingUnit.Name = record[fields["N_DET_HPORT"]]
+		rev.LosingUnit.Uic = fmt.Sprintf("N%05s", record[fields["N_UIC_DETACH"]])
+		rev.LosingUnit.City = record[fields["N_PDS_CITY"]]
+		rev.LosingUnit.Locality = record[fields["N_PDS_STATE"]]
+		rev.LosingUnit.Country = record[fields["N_PDS_CNTRY"]]
 
-		losingUnitName := record[fields["N_DET_HPORT"]]
-		losingUnitIdentCode := fmt.Sprintf("N%05s", record[fields["N_UIC_DETACH"]])
-		losingUnitCity := record[fields["N_PDS_CITY"]]
-		losingUnitState := record[fields["N_PDS_STATE"]]
-		losingUnitCountry := record[fields["N_PDS_CNTRY"]]
+		d, _ = time.Parse(usaDate, record[fields["N_EST_ARRIVAL_DT"]])
+		year, month, day := d.Date()
+		rev.ReportNoLaterThan = fmt.Sprintf("%d-%02d-%02d", year, month, day)
 
-		estArrivalDate := record[fields["N_EST_ARRIVAL_DT"]]
+		rev.GainingUnit = new(swagger.Unit)
+		rev.GainingUnit.Name = record[fields["N_ULT_HPORT"]]
+		rev.GainingUnit.Uic = fmt.Sprintf("N%05s", record[fields["N_UIC_ULT_DTY_STA"]])
+		rev.GainingUnit.City = record[fields["N_ULT_CITY"]]
+		rev.GainingUnit.Locality = record[fields["N_ULT_STATE"]]
+		rev.GainingUnit.Country = record[fields["N_ULT_CNTRY"]]
 
-		gainingUnitName := record[fields["N_ULT_HPORT"]]
-		gainingUnitIdentCode := fmt.Sprintf("N%05s", record[fields["N_UIC_ULT_DTY_STA"]])
-		gainingUnitCity := record[fields["N_ULT_CITY"]]
-		gainingUnitState := record[fields["N_ULT_STATE"]]
-		gainingUnitCountry := record[fields["N_ULT_CNTRY"]]
-
-		/*
-			| N_NON_ENT_IND | If 'Y', then this is a 'Cost Order' with obligated moving expenses. If 'N', then this is a 'No Cost Order', i.e., a PCA w/o PCS (Permanent Change of Assignment without Permanent Change of Station), and has no moving expenses. |
-		*/
-
-		var dependents bool
-		if record[fields["N_NUM_DEPN"]] == "Y" {
-			dependents = true
+		if record[fields["N_NON_ENT_IND"]] == "Y" {
+			rev.PcaWithoutPcs = true
 		} else {
-			dependents = false
+			rev.PcaWithoutPcs = false
+		}
+
+		if record[fields["N_NUM_DEPN"]] == "Y" {
+			rev.HasDependents = true
+		} else {
+			rev.HasDependents = false
 		}
 
 		tacSdn := record[fields["TAC_SDN"]]
-		tac := tacSdn[len(tacSdn)-4:]
-		sdn := tacSdn[:len(tacSdn)-4]
+		rev.PcsAccounting = new(swagger.Accounting)
+		rev.PcsAccounting.Tac = tacSdn[len(tacSdn)-4:]
+		rev.PcsAccounting.Sdn = tacSdn[:len(tacSdn)-4]
 
-		fmt.Printf("%s %s (%d):\n", ssn, orderCntlNbr, seqNum)
-		fmt.Printf("  %s %s %s (%s)\n", rateRank, rank.title, name, strings.ToUpper((string(rank.paygrade))))
-		fmt.Printf("  Has Dependents: %t\n", dependents)
-		fmt.Println("  ordersDate: " + ordersDate)
-		fmt.Println("  status: " + status)
-		fmt.Println("  ordersType: " + ordersType)
-		fmt.Println("  estArrivalDate: " + estArrivalDate)
-		fmt.Printf("  Losing Unit: %s (%s) %s, %s %s\n", losingUnitName, losingUnitIdentCode, losingUnitCity, losingUnitState, losingUnitCountry)
-		fmt.Printf("  Gaining Unit: %s (%s) %s, %s %s\n", gainingUnitName, gainingUnitIdentCode, gainingUnitCity, gainingUnitState, gainingUnitCountry)
-		fmt.Println("  SDN: " + sdn)
-		fmt.Println("  TAC: " + tac)
+		bodyBuf := &bytes.Buffer{}
+		encoder := json.NewEncoder(bodyBuf)
+		encoder.SetIndent("", "  ")
+		encoder.Encode(rev)
+
+		fmt.Print(bodyBuf.String())
 	}
 }

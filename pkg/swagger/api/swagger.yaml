@@ -1,0 +1,786 @@
+---
+swagger: "2.0"
+info:
+  description: "API to submit, amend, and cancel orders for my.move.mil."
+  version: "0.0.3"
+  title: "my.move.mil Orders Gateway"
+  license:
+    name: "MIT"
+    url: "https://github.com/transcom/mymove/blob/master/LICENSE.md"
+basePath: "/v0"
+schemes:
+- "http"
+paths:
+  /orders:
+    get:
+      tags:
+      - "orders"
+      summary: "Retrieve orders that match a particular search"
+      description: "Returns all orders that match all of the supplied parameters.\
+        \ At least one query parameter must be provided.\n"
+      operationId: "indexOrders"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ordersNum"
+        in: "query"
+        description: "The Orders number as it appears on the Orders"
+        required: false
+        type: "string"
+        x-exportParamName: "OrdersNum"
+      - name: "edipi"
+        in: "query"
+        description: "Electronic Data Interchange Personal Identifier, AKA the 10\
+          \ digit DoD ID Number of the member"
+        required: false
+        type: "string"
+        pattern: "^\\d{10}$"
+        x-exportParamName: "Edipi"
+      - name: "latestOnly"
+        in: "query"
+        description: "If true, look only at the latest Revision (by seqNum) of any\
+          \ set of Orders when applying the other Revision-specific parameters. If\
+          \ false, search all Revisions.\n\nDefaults to false if omitted.\n"
+        required: false
+        type: "boolean"
+        x-exportParamName: "LatestOnly"
+      - name: "status"
+        in: "query"
+        description: "Return only Orders where the status of the latest Revision of\
+          \ the Orders matches the supplied status."
+        required: false
+        type: "string"
+        enum:
+        - "authorized"
+        - "canceled"
+        x-exportParamName: "Status"
+      - name: "issuingAuthority"
+        in: "query"
+        description: "Name of the Issuing Authority of the Orders."
+        required: false
+        type: "string"
+        x-exportParamName: "IssuingAuthority"
+      responses:
+        200:
+          description: "Successful"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Orders"
+        400:
+          description: "Bad request"
+        401:
+          description: "must be authenticated to use this endpoint"
+        403:
+          description: "Forbidden"
+        404:
+          description: "No orders found"
+        500:
+          description: "Server error"
+    post:
+      tags:
+      - "orders"
+      summary: "Submit a new set of orders, make an amendment to an existing set of\
+        \ orders, or cancel a set of orders."
+      description: "Creates a Revision of a set of orders.\n\n## New Orders\nThe supplied\
+        \ Revision is considered part of a new set of Orders if the supplied ordersNum\
+        \ has never been seen before for the supplied issuingAuthority. A new UUID\
+        \ is created and associated with a new Orders, which is returned along with\
+        \ the supplied Revision.\n\n## Amended Orders\nIf the system determines that\
+        \ the supplied Revision is an amendment to an existing set of Orders, usually\
+        \ because the ordersNum already exists and the seqNum is unique, then the\
+        \ supplied Revision is added to the existing Orders.\n\nSpecifying the existing\
+        \ Orders' UUID is optional; clients are not required to remember the UUIDs\
+        \ returned with the Orders by previous calls to this API. If it is omitted,\
+        \ the system will attempt to locate the correct Orders using the ordersNum\
+        \ and issuingAuthority fields.\n\n## Canceled, Rescinded, or Revoked Orders\n\
+        To cancel, rescind, or revoke Orders, POST a new Revision with the status\
+        \ set to \"canceled\".\n\n# Errors\nIt is an error to specify an already-created\
+        \ seqNum in the provided Revision for an existing set of Orders.\n"
+      operationId: "postRevision"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ordersNum"
+        in: "query"
+        description: "The Orders number as it appears on the Orders"
+        required: true
+        type: "string"
+        x-exportParamName: "OrdersNum"
+      - name: "edipi"
+        in: "query"
+        description: "Electronic Data Interchange Personal Identifier, AKA the 10\
+          \ digit DoD ID Number of the member"
+        required: true
+        type: "string"
+        pattern: "^\\d{10}$"
+        x-exportParamName: "Edipi"
+      - name: "issuingAuthority"
+        in: "query"
+        description: "Name of the Issuing Authority of the Orders."
+        required: true
+        type: "string"
+        x-exportParamName: "IssuingAuthority"
+      - in: "body"
+        name: "revision"
+        required: true
+        schema:
+          $ref: "#/definitions/Revision"
+        x-exportParamName: "Revision"
+      responses:
+        201:
+          description: "Created"
+          schema:
+            $ref: "#/definitions/Orders"
+        400:
+          description: "Invalid"
+        401:
+          description: "must be authenticated to use this endpoint"
+        403:
+          description: "Forbidden"
+        500:
+          description: "Server error"
+  /orders/{uuid}:
+    get:
+      tags:
+      - "orders"
+      summary: "Retrieve a set of Orders and all of its Revisions by UUID"
+      operationId: "getOrders"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "uuid"
+        in: "path"
+        description: "UUID of the orders to return"
+        required: true
+        type: "string"
+        format: "uuid"
+        x-exportParamName: "Uuid"
+      responses:
+        200:
+          description: "Successful"
+          schema:
+            $ref: "#/definitions/Orders"
+        401:
+          description: "must be authenticated to use this endpoint"
+        403:
+          description: "Forbidden"
+        404:
+          description: "Orders not found"
+        500:
+          description: "Server error"
+    post:
+      tags:
+      - "orders"
+      summary: "Make an amendment to or cancel an existing set of orders by UUID"
+      description: "Creates a Revision of a set of orders. The Orders to be amended\
+        \ or canceled must already exist with the supplied UUID.\n\nThe seqNum in\
+        \ the supplied Revision must be unique, and not already present in the Orders.\
+        \ Nothing else is required to change in the Revision compared to any other\
+        \ Revision in the Orders.\n\n## Errors\nIt is an error to specify a non-existent\
+        \ UUID.\n\nIt is an error to specify an already-created seqNum in the Revision.\n"
+      operationId: "postRevisionToOrders"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "uuid"
+        in: "path"
+        description: "UUID of the orders to return"
+        required: true
+        type: "string"
+        format: "uuid"
+        x-exportParamName: "Uuid"
+      - in: "body"
+        name: "revision"
+        required: true
+        schema:
+          $ref: "#/definitions/Revision"
+        x-exportParamName: "Revision"
+      responses:
+        201:
+          description: "Created"
+          schema:
+            $ref: "#/definitions/Orders"
+        400:
+          description: "Invalid"
+        401:
+          description: "must be authenticated to use this endpoint"
+        403:
+          description: "Forbidden"
+        404:
+          description: "Orders not found"
+        500:
+          description: "Server error"
+definitions:
+  Orders:
+    type: "object"
+    required:
+    - "edipi"
+    - "issuingAuthority"
+    - "ordersNum"
+    - "revisions"
+    properties:
+      uuid:
+        type: "string"
+        format: "uuid"
+        example: "80200fa9-4ee2-49c5-b4fd-88b3ef4bd5eb"
+        description: "Universally Unique IDentifier. Generated internally."
+      ordersNum:
+        type: "string"
+        example: "030-00362 (Army), 0302018 9876543210 (Navy, after transformation),\
+          \ M7000213CTB28DZ (Marines), AJ-063322 (Air Force), 1214G85PRAAGK000 (Coast\
+          \ Guard), PS8D000025 (Civilian)"
+        description: "Orders number. Supposed to be unique, but in practice uniqueness\
+          \ is not guaranteed for all branches of service.\n\n## Army\nTypically found\
+          \ in the upper-left hand corner of printed orders.\n\n## Navy\nCorresponds\
+          \ to a transformation (see below) of the BUPERS Orders number, which is\
+          \ originally formatted as \"{Julian Day of the year (from 1 to 366)}{last\
+          \ digit of the year} {xxx-xx-xxxx SSN}\". It would be unique (because of\
+          \ the SSN), except that it's possible for a set of orders to be cut on the\
+          \ same day 10 years later for the same sailor, resulting in a collision.\n\
+          \nOn printed orders, this is typically the first line after \"RMKS/\".\n\
+          \n### Transformation\nBecause the BUPERS Orders Number contains PII (the\
+          \ SSN) and could potentially not be unique (because it only allows a single\
+          \ digit for the year), this API expects the Orders number to be reformatted\
+          \ as \"{Julian day}{4 digit year} {EDIPI}\". The full 4 digit year can be\
+          \ found in the dateIssued field of the first revision, while the EDIPI can\
+          \ be copied from the edipi field.\n\nTransforming this back to the BUPERS\
+          \ format can be achieved by removing the first three digits of the year\
+          \ field and replacing the EDIPI with the member's SSN. The SSN can be fetched\
+          \ using DMDC's Identity Web Services Real-time Broker Service.\n\n## Marine\
+          \ Corps\nCorresponds to the CT (Commercial Travel) SDN. On Web Orders, the\
+          \ CT SDN is found in the table at the bottom, in the last column of the\
+          \ row that begins with \"Travel\".\n\n## Air Force\nCorresponds to the Special\
+          \ Order number. On AF Form 899, the \"SPECIAL ORDERS NO\" is found in box\
+          \ 27.\n\n## Coast Guard\nCorresponds to the Travel Order No.\n\n## Civilian\n\
+          Corresponds to the Travel Authorization Number.\n"
+      edipi:
+        type: "string"
+        description: "Electronic Data Interchange Personal Identifier, AKA the 10\
+          \ digit DoD ID Number of the member"
+        pattern: "^[0-9]{10}$"
+      issuingAuthority:
+        type: "string"
+        description: "Military Department or Civilian Agency that authorized these\
+          \ orders; e.g., Department of the Army, Department of the Navy, Defense\
+          \ Information Systems Agency (DISA), etc."
+      revisions:
+        type: "array"
+        items:
+          $ref: "#/definitions/Revision"
+    example:
+      issuingAuthority: "issuingAuthority"
+      ordersNum: "030-00362 (Army), 0302018 9876543210 (Navy, after transformation),\
+        \ M7000213CTB28DZ (Marines), AJ-063322 (Air Force), 1214G85PRAAGK000 (Coast\
+        \ Guard), PS8D000025 (Civilian)"
+      revisions:
+      - dateIssued: "2000-01-23T04:56:07.000+00:00"
+        povShipmentAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        tourType: {}
+        comments: "comments"
+        seqNum: 0
+        gainingUnit:
+          country: "country"
+          postal-code: "postal-code"
+          city: "city"
+          name: "name"
+          locality: "locality"
+          uic: "uic"
+        reportNoEarlierThan: "2000-01-23"
+        pcsAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        hasDependents: true
+        reportNoLaterThan: "2000-01-23"
+        ubAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        losingUnit:
+          country: "country"
+          postal-code: "postal-code"
+          city: "city"
+          name: "name"
+          locality: "locality"
+          uic: "uic"
+        povStorageAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        pcaWithoutPcs: true
+        member:
+          affiliation: {}
+          rank: {}
+          given-name: "given-name"
+          middle-name: "middle-name"
+          suffix: "suffix"
+          title: "title"
+          family-name: "family-name"
+        ntsAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        tdyEnRoute: true
+        ordersType: {}
+        status: "authorized"
+      - dateIssued: "2000-01-23T04:56:07.000+00:00"
+        povShipmentAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        tourType: {}
+        comments: "comments"
+        seqNum: 0
+        gainingUnit:
+          country: "country"
+          postal-code: "postal-code"
+          city: "city"
+          name: "name"
+          locality: "locality"
+          uic: "uic"
+        reportNoEarlierThan: "2000-01-23"
+        pcsAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        hasDependents: true
+        reportNoLaterThan: "2000-01-23"
+        ubAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        losingUnit:
+          country: "country"
+          postal-code: "postal-code"
+          city: "city"
+          name: "name"
+          locality: "locality"
+          uic: "uic"
+        povStorageAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        pcaWithoutPcs: true
+        member:
+          affiliation: {}
+          rank: {}
+          given-name: "given-name"
+          middle-name: "middle-name"
+          suffix: "suffix"
+          title: "title"
+          family-name: "family-name"
+        ntsAccounting:
+          tac: "tac"
+          sdn: "sdn"
+          loa: "loa"
+        tdyEnRoute: true
+        ordersType: {}
+        status: "authorized"
+      uuid: "80200fa9-4ee2-49c5-b4fd-88b3ef4bd5eb"
+      edipi: "edipi"
+  Revision:
+    type: "object"
+    required:
+    - "gainingUnit"
+    - "hasDependents"
+    - "losingUnit"
+    - "member"
+    - "ordersType"
+    - "reportNoLaterThan"
+    - "seqNum"
+    - "status"
+    properties:
+      seqNum:
+        type: "integer"
+        description: "Sequence number. When an order is amended, it should get a higher\
+          \ sequence number than all previous revisions of the same orders. The orders\
+          \ with the highest sequence number is considered the current, authoritative\
+          \ version, even if its dateIssued is earlier.\n\nThe sequence number is\
+          \ NOT required to increase monotonically or sequentially; in other words,\
+          \ if a set of orders is modified twice, the sequence numbers could be 1,\
+          \ 5858300, and 30.\n"
+        minimum: 0
+      member:
+        $ref: "#/definitions/Member"
+      status:
+        type: "string"
+        description: "Indicates whether these Orders are authorized or canceled."
+        enum:
+        - "authorized"
+        - "canceled"
+      dateIssued:
+        type: "string"
+        format: "date-time"
+        description: "The date and time that these orders were cut."
+      pcaWithoutPcs:
+        type: "boolean"
+        description: "Permanent Change of Assignment without Permanent Change of Station.\
+          \ A PCA without PCS happens when a member is assigned to a new unit at the\
+          \ same duty station, or to a new duty station geographically close to the\
+          \ current duty station.\n\nIf true, then these orders do not authorize any\
+          \ move expenses. If omitted or false, then these orders are a PCS and should\
+          \ authorize move expenses.\n\nIt is not unheard of for the initial revision\
+          \ of orders to have this set to false and then later to be amended to true\
+          \ and vice-versa.\n"
+      tdyEnRoute:
+        type: "boolean"
+        description: "TDY (Temporary Duty Yonder) en-route.\nIf omitted, assume false.\n"
+      tourType:
+        $ref: "#/definitions/TourType"
+      ordersType:
+        $ref: "#/definitions/OrdersType"
+      hasDependents:
+        type: "boolean"
+        description: "True if the service member has dependents (e.g., spouse, children,\
+          \ caring for an elderly parent, etc.), False otherwise.\n\nWhen the member\
+          \ has dependents, it usually raises their weight entitlement.\n"
+      losingUnit:
+        $ref: "#/definitions/Unit"
+      gainingUnit:
+        $ref: "#/definitions/Unit"
+      reportNoEarlierThan:
+        type: "string"
+        format: "date"
+        description: "Earliest date that the service member is allowed to report for\
+          \ duty at the new duty station."
+      reportNoLaterThan:
+        type: "string"
+        format: "date"
+        description: "Latest date that the service member is allowed to report for\
+          \ duty at the new duty station."
+      pcsAccounting:
+        $ref: "#/definitions/Accounting"
+      ntsAccounting:
+        $ref: "#/definitions/Accounting"
+      povShipmentAccounting:
+        $ref: "#/definitions/Accounting"
+      povStorageAccounting:
+        $ref: "#/definitions/Accounting"
+      ubAccounting:
+        $ref: "#/definitions/Accounting"
+      comments:
+        type: "string"
+        description: "Free-form text that may or may not contain information relevant\
+          \ to moving."
+    example:
+      dateIssued: "2000-01-23T04:56:07.000+00:00"
+      povShipmentAccounting:
+        tac: "tac"
+        sdn: "sdn"
+        loa: "loa"
+      tourType: {}
+      comments: "comments"
+      seqNum: 0
+      gainingUnit:
+        country: "country"
+        postal-code: "postal-code"
+        city: "city"
+        name: "name"
+        locality: "locality"
+        uic: "uic"
+      reportNoEarlierThan: "2000-01-23"
+      pcsAccounting:
+        tac: "tac"
+        sdn: "sdn"
+        loa: "loa"
+      hasDependents: true
+      reportNoLaterThan: "2000-01-23"
+      ubAccounting:
+        tac: "tac"
+        sdn: "sdn"
+        loa: "loa"
+      losingUnit:
+        country: "country"
+        postal-code: "postal-code"
+        city: "city"
+        name: "name"
+        locality: "locality"
+        uic: "uic"
+      povStorageAccounting:
+        tac: "tac"
+        sdn: "sdn"
+        loa: "loa"
+      pcaWithoutPcs: true
+      member:
+        affiliation: {}
+        rank: {}
+        given-name: "given-name"
+        middle-name: "middle-name"
+        suffix: "suffix"
+        title: "title"
+        family-name: "family-name"
+      ntsAccounting:
+        tac: "tac"
+        sdn: "sdn"
+        loa: "loa"
+      tdyEnRoute: true
+      ordersType: {}
+      status: "authorized"
+  Affiliation:
+    type: "string"
+    description: "Military branch of service"
+    enum:
+    - "air-force"
+    - "army"
+    - "civilian-agency"
+    - "coast-guard"
+    - "marine-corps"
+    - "navy"
+    x-display-value:
+      air-force: "Air Force"
+      army: "Army"
+      civilian: "Civilian Agency"
+      coast-guard: "Coast Guard"
+      marine-corps: "Marine Corps"
+      navy: "Navy"
+  Member:
+    type: "object"
+    required:
+    - "affiliation"
+    - "family-name"
+    - "given-name"
+    - "rank"
+    properties:
+      given-name:
+        type: "string"
+        description: "In languages that use Western order, like English, this is the\
+          \ first name."
+      family-name:
+        type: "string"
+        description: "In languages that use Western order, like English, this is the\
+          \ last name. NOTE: some services lump suffixes (like Jr. or Sr.) in with\
+          \ the family name!"
+      middle-name:
+        type: "string"
+        description: "Middle name or middle initial"
+      suffix:
+        type: "string"
+        description: "Jr., Sr., III, etc."
+      affiliation:
+        $ref: "#/definitions/Affiliation"
+      rank:
+        $ref: "#/definitions/Rank"
+      title:
+        type: "string"
+        description: "If supplied, this is the preferred form of address or preferred\
+          \ human-readable rank. This is especially useful when a rank has multiple\
+          \ possible titles. For example, in the Army, an E-4 can be either a Specialist\
+          \ or a Corporal. In the Marine Corps, an E-8 can be either a Master Sergeant\
+          \ or a First Sergeant, and they do care about the distinction.\n\nIf omitted,\
+          \ use the default name for the rank for the provided affiliation.\n"
+    example:
+      affiliation: {}
+      rank: {}
+      given-name: "given-name"
+      middle-name: "middle-name"
+      suffix: "suffix"
+      title: "title"
+      family-name: "family-name"
+  TourType:
+    type: "string"
+    description: "Accompanied or Unaccompanied; i.e., are dependents authorized to\
+      \ accompany the service member on the move. For certain OCONUS destinations,\
+      \ the tour type affects the member's entitlement. Otherwise, it doesn't matter.\n\
+      \nIf omitted, assume accompanied.\n"
+    enum:
+    - "accompanied"
+    - "unaccompanied"
+    - "unaccompanied-dependents-restricted"
+    x-display-value:
+      accompanied: "Accompanied"
+      unaccompanied: "Unaccompanied"
+      unaccompanied-dependents-restricted: "Unaccompanied, Dependents Restricted"
+  OrdersType:
+    type: "string"
+    description: "The common types fit into the acronym ASTRO-UB.\n  * **A**ccession\
+      \ - Joining the military\n  * **S**eparation / Retirement - Leaving the military\n\
+      \  * **T**raining\n  * **R**otational\n  * **O**perational\n  * **U**nit Move\
+      \ - When an entire unit is reassigned to another installation, often as a deployment\n\
+      \  * **B**RAC - Base Realignment and Closure. As of this writing, the most recent\
+      \ iteration of BRAC has ended, but Congress may start another one in the future.\n\
+      \nConsequences of this field include\n  * Separation and retirement moves currently\
+      \ require the member to go through in-person counseling at the TMO / PPPO.\n"
+    enum:
+    - "accession"
+    - "between-duty-stations"
+    - "brac"
+    - "cot"
+    - "emergency-evac"
+    - "ipcot"
+    - "low-cost-travel"
+    - "operational"
+    - "oteip"
+    - "rotational"
+    - "separation"
+    - "special-purpose"
+    - "training"
+    - "unit-move"
+    x-display-value:
+      accession: "Accession"
+      between-duty-stations: "Between Duty Stations"
+      brac: "BRAC (Base Realignment And Closure)"
+      cot: "COT (Consecutive Overseas Travel)"
+      emergency-evac: "Emergency Non-Member Evacuation"
+      ipcot: "IPCOT (In-Place Consecutive Overseas Travel)"
+      low-cost-travel: "Low Cost Travel"
+      operational: "Operational"
+      oteip: "OTEIP (Overseas Tour Extension Incentive Program)"
+      rotational: "Rotational"
+      separation: "Separation / Retirement"
+      special-purpose: "Special Purpose Reimbursable"
+      training: "Training"
+      unit-move: "Unit Move"
+  Rank:
+    type: "string"
+    description: "Rank of the service member. Some of these ranks will have identical\
+      \ entitlements."
+    enum:
+    - "aviation-cadet"
+    - "cadet"
+    - "civilian"
+    - "e-1"
+    - "e-2"
+    - "e-3"
+    - "e-4"
+    - "e-5"
+    - "e-6"
+    - "e-7"
+    - "e-8"
+    - "e-9"
+    - "midshipman"
+    - "o-1"
+    - "o-2"
+    - "o-3"
+    - "o-4"
+    - "o-5"
+    - "o-6"
+    - "o-7"
+    - "o-8"
+    - "o-9"
+    - "o-10"
+    - "w-1"
+    - "w-2"
+    - "w-3"
+    - "w-4"
+    - "w-5"
+    x-display-value:
+      aviation-cadet: "Aviation Cadet"
+      cadet: "Cadet"
+      civilian: "Civilian"
+      e-1: "E-1"
+      e-2: "E-2"
+      e-3: "E-3"
+      e-4: "E-4"
+      e-5: "E-5"
+      e-6: "E-6"
+      e-7: "E-7"
+      e-8: "E-8"
+      e-9: "E-9"
+      midshipman: "Midshipman"
+      o-1: "O-1"
+      o-2: "O-2"
+      o-3: "O-3"
+      o-4: "O-4"
+      o-5: "O-5"
+      o-6: "O-6"
+      o-7: "O-7"
+      o-8: "O-8"
+      o-9: "O-9"
+      o-10: "O-10"
+      w-1: "W-1"
+      w-2: "W-2"
+      w-3: "W-3"
+      w-4: "W-4"
+      w-5: "W-5"
+  Accounting:
+    type: "object"
+    properties:
+      tac:
+        type: "string"
+        description: "Transportation Account Code - a reference to a line of accounting\
+          \ in the Transportation Global Edit Tables (TGET). This is the most common\
+          \ way to charge a move expense to the correct pool of money.\n\n> TGET is\
+          \ a centralized repository that contains established transportation LOAs\
+          \ formatted in accordance with Service/Agency LOA requirements and associated\
+          \ TACs.\n\n## Army\nArmy orders do not include a TAC. Instead, they provide\
+          \ an MDC.\n\n> A movement designator code (MDC) provides the office of the\
+          \ Deputy Chief of Staff for Personnel with a record of the type of PCS travel\
+          \ performed by Active Army personnel. This record is used to centrally manage\
+          \ PCS funds.\n\nThe correct TAC can be located by looking up the MDC, move\
+          \ type, and Fiscal Year (corresponding to the orders issuance date) in the\
+          \ CROSSWALK Excel spreadsheet.\n\n## Navy\nNavy orders include TACs for\
+          \ PCS expenses (if moving expenses are authorized) and (sometimes) for NTS\
+          \ expenses. If present, the NTS TAC will have an underscore in the last\
+          \ column, which would ordinarily be populated with the last digit of the\
+          \ current FY. The Navy always wants to use the current Fiscal Year's TAC\
+          \ to pay NTS invoices, which can appear years after the Orders are cut.\
+          \ In other words, when it comes time to pay an NTS invoice, the underscore\
+          \ in the NTS TAC is replaced with the last digit of the current FY, and\
+          \ then that reconstructed TAC is used to look up the correct LOA in TGET.\n"
+      sdn:
+        type: "string"
+        description: "Standard Document Number. The SDN is one way to connect money\
+          \ that was obligated for a specific member's move at order issuance time\
+          \ to expenses incurred by that member's move at invoicing time. This obviously\
+          \ only works if the SDN is unique to the member and to the specific set\
+          \ of orders.\n\n## Marine Corps\nThe last four characters of the SDN should\
+          \ be same as the TAC.\n\nAt the time of this writing, the Marines have separate\
+          \ SDNs for each category of moving expenses (HHG, POV Storage, NTS, etc.),\
+          \ but only one of them is unique to a specific Marine - the Commercial Travel\
+          \ (CT) SDN. The CT SDN **is** the Orders # for the Marines. In the future,\
+          \ the Marines would like to include the first 15 characters of the CT SDN\
+          \ in any transactions with the Third Party Payment System, and for the TPPS\
+          \ to include this unique value with every expense in the resulting report.\n"
+      loa:
+        type: "string"
+        description: "The full Line Of Accounting. Use this if no TAC is supplied."
+    example:
+      tac: "tac"
+      sdn: "sdn"
+      loa: "loa"
+  Unit:
+    type: "object"
+    required:
+    - "city"
+    - "postal-code"
+    properties:
+      name:
+        type: "string"
+        description: "Human-readable name of the Unit."
+      uic:
+        type: "string"
+        description: "Unit Identification Code - a six character alphanumeric code\
+          \ that uniquely identifies each United States Department of Defense entity.\
+          \ Used in Army, Air Force, and Navy orders.\n\nNote that the Navy has the\
+          \ habit of omitting the leading character, which is always \"N\" for them.\n"
+        minLength: 6
+        maxLength: 6
+      city:
+        type: "string"
+        description: "May be FPO or APO for OCONUS commands."
+      locality:
+        type: "string"
+        description: "State (US). OCONUS units may not have the equivalent information\
+          \ available."
+      country:
+        type: "string"
+        description: "ISO 3166-1 alpha-2 country code. If blank, assume US"
+        pattern: "^[A-Z]{2}$"
+      postal-code:
+        type: "string"
+        description: "In the USA, this is the ZIP Code."
+    example:
+      country: "country"
+      postal-code: "postal-code"
+      city: "city"
+      name: "name"
+      locality: "locality"
+      uic: "uic"

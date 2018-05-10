@@ -8,50 +8,52 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/transcom/nom/pkg/swagger"
 )
 
-var enlistedOrdersTypes = map[string]string{
-	"1": "ipcot",           // IPCOT In-place consecutive overseas travel
-	"8": "oteip",           // Overseas Tour Extension Incentive Program (OTEIP)
-	"9": "training",        // NAVCAD (Naval Cadet) Training
-	"A": "accession",       // Accession Travel Recruits
-	"B": "accession",       // Non-recruit Accession Travel
-	"C": "training",        // Training Travel
-	"D": "operational",     // Operational Travel
-	"E": "separation",      // Separation Travel
-	"F": "unit-move",       // Organized Unit/Homeport Change
-	"G": "accession",       // Midshipman Accession Travel
-	"H": "special-purpose", // Special Purpose Reimbursable
-	"I": "accession",       // NAVCAD(Naval Cadet) Accession
-	"J": "accession",       // Accession Travel Recruits
-	"K": "accession",       // Non-recruit Accession Travel
-	"L": "training",        // Training Travel
-	"M": "rotational",      // Rotational Travel
-	"N": "separation",      // Separation Travel
-	"O": "unit-move",       // Organized Unit/Homeport Change
-	"P": "separation",      // Midshipman Separation Travel
-	"R": "operational",     // Misc. Operational Non-member
-	"X": "emergency-evac",  // EMERGENCY NON-MEMBER EVACS
-	"Y": "rotational",      // Misc. Rotational Non-member
-	"Z": "separation",      // NAVCAD(Naval Cadet) Separation
+var enlistedOrdersTypes = map[string]swagger.OrdersType{
+	"1": swagger.IPCOT,           // IPCOT In-place consecutive overseas travel
+	"8": swagger.OTEIP,           // Overseas Tour Extension Incentive Program (OTEIP)
+	"9": swagger.TRAINING,        // NAVCAD (Naval Cadet) Training
+	"A": swagger.ACCESSION,       // Accession Travel Recruits
+	"B": swagger.ACCESSION,       // Non-recruit Accession Travel
+	"C": swagger.TRAINING,        // Training Travel
+	"D": swagger.OPERATIONAL,     // Operational Travel
+	"E": swagger.SEPARATION,      // Separation Travel
+	"F": swagger.UNIT_MOVE,       // Organized Unit/Homeport Change
+	"G": swagger.ACCESSION,       // Midshipman Accession Travel
+	"H": swagger.SPECIAL_PURPOSE, // Special Purpose Reimbursable
+	"I": swagger.ACCESSION,       // NAVCAD(Naval Cadet) Accession
+	"J": swagger.ACCESSION,       // Accession Travel Recruits
+	"K": swagger.ACCESSION,       // Non-recruit Accession Travel
+	"L": swagger.TRAINING,        // Training Travel
+	"M": swagger.ROTATIONAL,      // Rotational Travel
+	"N": swagger.SEPARATION,      // Separation Travel
+	"O": swagger.UNIT_MOVE,       // Organized Unit/Homeport Change
+	"P": swagger.SEPARATION,      // Midshipman Separation Travel
+	"R": swagger.OPERATIONAL,     // Misc. Operational Non-member
+	"X": swagger.EMERGENCY_EVAC,  // EMERGENCY NON-MEMBER EVACS
+	"Y": swagger.ROTATIONAL,      // Misc. Rotational Non-member
+	"Z": swagger.SEPARATION,      // NAVCAD(Naval Cadet) Separation
 }
 
-var officerOrdersTypes = map[string]string{
-	"0": "ipcot",           // IPCOT In-place consecutive overseas travel
-	"2": "accession",       // Accession Travel
-	"3": "training",        // Training Travel
-	"4": "operational",     // Operational Travel
-	"5": "separation",      // Separation Travel
-	"6": "unit-move",       // Organized Unit/Homeport Change
-	"7": "emergency-evac",  // Emergency Non-member Evac
-	"H": "special-purpose", // Special Purpose Reimbursable
-	"Q": "rotational",      // Misc. Rotational Non-member
-	"S": "accession",       // Accession Travel
-	"T": "training",        // Training Travel
-	"U": "rotational",      // Rotational Travel
-	"V": "separation",      // Separation Travel
-	"W": "unit-move",       // Organized Unit/Homeport Change
-	"X": "rotational",      // Misc. Rotational Non-member
+var officerOrdersTypes = map[string]swagger.OrdersType{
+	"0": swagger.IPCOT,           // IPCOT In-place consecutive overseas travel
+	"2": swagger.ACCESSION,       // Accession Travel
+	"3": swagger.TRAINING,        // Training Travel
+	"4": swagger.OPERATIONAL,     // Operational Travel
+	"5": swagger.SEPARATION,      // Separation Travel
+	"6": swagger.UNIT_MOVE,       // Organized Unit/Homeport Change
+	"7": swagger.EMERGENCY_EVAC,  // Emergency Non-member Evac
+	"H": swagger.SPECIAL_PURPOSE, // Special Purpose Reimbursable
+	"Q": swagger.ROTATIONAL,      // Misc. Rotational Non-member
+	"S": swagger.ACCESSION,       // Accession Travel
+	"T": swagger.TRAINING,        // Training Travel
+	"U": swagger.ROTATIONAL,      // Rotational Travel
+	"V": swagger.SEPARATION,      // Separation Travel
+	"W": swagger.UNIT_MOVE,       // Organized Unit/Homeport Change
+	"X": swagger.ROTATIONAL,      // Misc. Rotational Non-member
 }
 
 func main() {
@@ -114,7 +116,7 @@ func main() {
 		rank := RankFromAbbreviation(rateRank)
 
 		purpose := record[fields["N_CIC_PURP"]]
-		var ordersType string
+		var ordersType swagger.OrdersType
 		if rank.officer {
 			ordersType = officerOrdersTypes[purpose]
 		} else {
@@ -125,7 +127,7 @@ func main() {
 		name := record[fields["NAME"]]
 
 		losingUnitName := record[fields["N_DET_HPORT"]]
-		losingUnitIdentCode := record[fields["N_UIC_DETACH"]]
+		losingUnitIdentCode := fmt.Sprintf("N%05s", record[fields["N_UIC_DETACH"]])
 		losingUnitCity := record[fields["N_PDS_CITY"]]
 		losingUnitState := record[fields["N_PDS_STATE"]]
 		losingUnitCountry := record[fields["N_PDS_CNTRY"]]
@@ -133,7 +135,7 @@ func main() {
 		estArrivalDate := record[fields["N_EST_ARRIVAL_DT"]]
 
 		gainingUnitName := record[fields["N_ULT_HPORT"]]
-		gainingUnitIdentCode := record[fields["N_UIC_ULT_DTY_STA"]]
+		gainingUnitIdentCode := fmt.Sprintf("N%05s", record[fields["N_UIC_ULT_DTY_STA"]])
 		gainingUnitCity := record[fields["N_ULT_CITY"]]
 		gainingUnitState := record[fields["N_ULT_STATE"]]
 		gainingUnitCountry := record[fields["N_ULT_CNTRY"]]
@@ -154,7 +156,7 @@ func main() {
 		sdn := tacSdn[:len(tacSdn)-4]
 
 		fmt.Printf("%s %s (%d):\n", ssn, orderCntlNbr, seqNum)
-		fmt.Printf("  %s %s %s (%s)\n", rateRank, rank.title, name, strings.ToUpper(rank.paygrade))
+		fmt.Printf("  %s %s %s (%s)\n", rateRank, rank.title, name, strings.ToUpper((string(rank.paygrade))))
 		fmt.Printf("  Has Dependents: %t\n", dependents)
 		fmt.Println("  ordersDate: " + ordersDate)
 		fmt.Println("  status: " + status)

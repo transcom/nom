@@ -1,60 +1,64 @@
 package main
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/transcom/nom/pkg/swagger"
+)
 
 // Rank correlates a title with its DoD paygrade and indicates whether the rank belongs to a commissioned or warrant officer
-type Rank struct {
+type RankTitlePaygrade struct {
 	officer  bool
 	title    string
-	paygrade string
+	paygrade swagger.Rank
 }
 
 type rate struct {
 	prefix   string
 	suffix   string
-	paygrade string
+	paygrade swagger.Rank
 }
 
-var officerRanks = map[string]Rank{
-	"OC":   Rank{officer: true, title: "Officer Candidate", paygrade: "e-5"},
-	"ENS":  Rank{officer: true, title: "Ensign", paygrade: "o-1"},
-	"LTJG": Rank{officer: true, title: "Lieutenant Junior Grade", paygrade: "o-2"},
-	"LT":   Rank{officer: true, title: "Lieutenant", paygrade: "o-3"},
-	"LCDR": Rank{officer: true, title: "Lieutenant Commander", paygrade: "o-4"},
-	"CDR":  Rank{officer: true, title: "Commander", paygrade: "o-5"},
-	"CAPT": Rank{officer: true, title: "Captain", paygrade: "o-6"},
-	"RDML": Rank{officer: true, title: "Rear Admiral (lower half)", paygrade: "o-7"},
-	"RDMU": Rank{officer: true, title: "Rear Admiral (upper half)", paygrade: "o-8"},
-	"VADM": Rank{officer: true, title: "Vice Admiral", paygrade: "o-9"},
-	"ADM":  Rank{officer: true, title: "Admiral", paygrade: "o-10"},
-	"WO1":  Rank{officer: true, title: "Warrant Officer", paygrade: "w-1"},
-	"CWO2": Rank{officer: true, title: "Chief Warrant Officer", paygrade: "w-2"},
-	"CWO3": Rank{officer: true, title: "Chief Warrant Officer", paygrade: "w-3"},
-	"CWO4": Rank{officer: true, title: "Chief Warrant Officer", paygrade: "w-4"},
-	"CWO5": Rank{officer: true, title: "Chief Warrant Officer", paygrade: "w-5"},
+var officerRanks = map[string]RankTitlePaygrade{
+	"OC":   RankTitlePaygrade{officer: true, title: "Officer Candidate", paygrade: swagger.E_5},
+	"ENS":  RankTitlePaygrade{officer: true, title: "Ensign", paygrade: swagger.O_1},
+	"LTJG": RankTitlePaygrade{officer: true, title: "Lieutenant Junior Grade", paygrade: swagger.O_2},
+	"LT":   RankTitlePaygrade{officer: true, title: "Lieutenant", paygrade: swagger.O_3},
+	"LCDR": RankTitlePaygrade{officer: true, title: "Lieutenant Commander", paygrade: swagger.O_4},
+	"CDR":  RankTitlePaygrade{officer: true, title: "Commander", paygrade: swagger.O_5},
+	"CAPT": RankTitlePaygrade{officer: true, title: "Captain", paygrade: swagger.O_6},
+	"RDML": RankTitlePaygrade{officer: true, title: "Rear Admiral (lower half)", paygrade: swagger.O_7},
+	"RDMU": RankTitlePaygrade{officer: true, title: "Rear Admiral (upper half)", paygrade: swagger.O_8},
+	"VADM": RankTitlePaygrade{officer: true, title: "Vice Admiral", paygrade: swagger.O_9},
+	"ADM":  RankTitlePaygrade{officer: true, title: "Admiral", paygrade: swagger.O_10},
+	"WO1":  RankTitlePaygrade{officer: true, title: "Warrant Officer", paygrade: swagger.W_1},
+	"CWO2": RankTitlePaygrade{officer: true, title: "Chief Warrant Officer", paygrade: swagger.W_2},
+	"CWO3": RankTitlePaygrade{officer: true, title: "Chief Warrant Officer", paygrade: swagger.W_3},
+	"CWO4": RankTitlePaygrade{officer: true, title: "Chief Warrant Officer", paygrade: swagger.W_4},
+	"CWO5": RankTitlePaygrade{officer: true, title: "Chief Warrant Officer", paygrade: swagger.W_5},
 }
 
-var bareEnlistedRanks = map[string]Rank{
-	"AR":    Rank{officer: false, title: "Airman Recruit", paygrade: "e-1"},
-	"CR":    Rank{officer: false, title: "Constructionman Recruit", paygrade: "e-1"},
-	"FR":    Rank{officer: false, title: "Fireman Recruit", paygrade: "e-1"},
-	"HR":    Rank{officer: false, title: "Hospital Recruit", paygrade: "e-1"},
-	"SR":    Rank{officer: false, title: "Seaman Recruit", paygrade: "e-1"},
-	"AA":    Rank{officer: false, title: "Airman Apprentice", paygrade: "e-2"},
-	"CA":    Rank{officer: false, title: "Constructionman Apprentice", paygrade: "e-2"},
-	"FA":    Rank{officer: false, title: "Fireman Apprentice", paygrade: "e-2"},
-	"HA":    Rank{officer: false, title: "Hospitalman Apprentice", paygrade: "e-2"},
-	"SA":    Rank{officer: false, title: "Seaman Apprentice", paygrade: "e-2"},
-	"AN":    Rank{officer: false, title: "Airman", paygrade: "e-3"},
-	"CN":    Rank{officer: false, title: "Constructionman", paygrade: "e-3"},
-	"FN":    Rank{officer: false, title: "Fireman", paygrade: "e-3"},
-	"HN":    Rank{officer: false, title: "Hospitalman", paygrade: "e-3"},
-	"SN":    Rank{officer: false, title: "Seaman", paygrade: "e-3"},
-	"CMDCS": Rank{officer: false, title: "Command Senior Chief Petty Officer", paygrade: "e-8"},
-	"CMDCM": Rank{officer: false, title: "Command Master Chief Petty Officer", paygrade: "e-9"},
-	"FLTCM": Rank{officer: false, title: "Fleet Master Chief Petty Officer", paygrade: "e-9"},
-	"FORCM": Rank{officer: false, title: "Force Master Chief Petty Officer", paygrade: "e-9"},
-	"MCPON": Rank{officer: false, title: "Navy Master Chief Petty Officer", paygrade: "e-9"},
+var bareEnlistedRanks = map[string]RankTitlePaygrade{
+	"AR":    RankTitlePaygrade{officer: false, title: "Airman Recruit", paygrade: swagger.E_1},
+	"CR":    RankTitlePaygrade{officer: false, title: "Constructionman Recruit", paygrade: swagger.E_1},
+	"FR":    RankTitlePaygrade{officer: false, title: "Fireman Recruit", paygrade: swagger.E_1},
+	"HR":    RankTitlePaygrade{officer: false, title: "Hospital Recruit", paygrade: swagger.E_1},
+	"SR":    RankTitlePaygrade{officer: false, title: "Seaman Recruit", paygrade: swagger.E_1},
+	"AA":    RankTitlePaygrade{officer: false, title: "Airman Apprentice", paygrade: swagger.E_2},
+	"CA":    RankTitlePaygrade{officer: false, title: "Constructionman Apprentice", paygrade: swagger.E_2},
+	"FA":    RankTitlePaygrade{officer: false, title: "Fireman Apprentice", paygrade: swagger.E_2},
+	"HA":    RankTitlePaygrade{officer: false, title: "Hospitalman Apprentice", paygrade: swagger.E_2},
+	"SA":    RankTitlePaygrade{officer: false, title: "Seaman Apprentice", paygrade: swagger.E_2},
+	"AN":    RankTitlePaygrade{officer: false, title: "Airman", paygrade: swagger.E_3},
+	"CN":    RankTitlePaygrade{officer: false, title: "Constructionman", paygrade: swagger.E_3},
+	"FN":    RankTitlePaygrade{officer: false, title: "Fireman", paygrade: swagger.E_3},
+	"HN":    RankTitlePaygrade{officer: false, title: "Hospitalman", paygrade: swagger.E_3},
+	"SN":    RankTitlePaygrade{officer: false, title: "Seaman", paygrade: swagger.E_3},
+	"CMDCS": RankTitlePaygrade{officer: false, title: "Command Senior Chief Petty Officer", paygrade: swagger.E_8},
+	"CMDCM": RankTitlePaygrade{officer: false, title: "Command Master Chief Petty Officer", paygrade: swagger.E_9},
+	"FLTCM": RankTitlePaygrade{officer: false, title: "Fleet Master Chief Petty Officer", paygrade: swagger.E_9},
+	"FORCM": RankTitlePaygrade{officer: false, title: "Force Master Chief Petty Officer", paygrade: swagger.E_9},
+	"MCPON": RankTitlePaygrade{officer: false, title: "Navy Master Chief Petty Officer", paygrade: swagger.E_9},
 }
 
 var enlistedJobs = map[string]string{
@@ -150,28 +154,28 @@ var enlistedJobs = map[string]string{
 }
 
 var enlistedRates = map[string]rate{
-	"AR": rate{prefix: "", suffix: " Airman Recruit", paygrade: "e-1"},
-	"CR": rate{prefix: "", suffix: " Constructionman Recruit", paygrade: "e-1"},
-	"FR": rate{prefix: "", suffix: " Fireman Recruit", paygrade: "e-1"},
-	"SR": rate{prefix: "", suffix: " Seaman Recruit", paygrade: "e-1"},
-	"AA": rate{prefix: "", suffix: " Airman Apprentice", paygrade: "e-2"},
-	"CA": rate{prefix: "", suffix: " Constructionman Apprentice", paygrade: "e-2"},
-	"FA": rate{prefix: "", suffix: " Fireman Apprentice", paygrade: "e-2"},
-	"SA": rate{prefix: "", suffix: " Seaman Apprentice", paygrade: "e-2"},
-	"AN": rate{prefix: "", suffix: " Airman", paygrade: "e-3"},
-	"CN": rate{prefix: "", suffix: " Constructionman", paygrade: "e-3"},
-	"FN": rate{prefix: "", suffix: " Fireman", paygrade: "e-3"},
-	"SN": rate{prefix: "", suffix: " Seaman", paygrade: "e-3"},
-	"3":  rate{prefix: "", suffix: " Third Class", paygrade: "e-4"},
-	"2":  rate{prefix: "", suffix: " Second Class", paygrade: "e-5"},
-	"1":  rate{prefix: "", suffix: " First Class", paygrade: "e-6"},
-	"C":  rate{prefix: "Chief ", suffix: "", paygrade: "e-7"},
-	"CS": rate{prefix: "Senior Chief ", suffix: "", paygrade: "e-8"},
-	"CM": rate{prefix: "Master Chief ", suffix: "", paygrade: "e-9"},
+	"AR": rate{prefix: "", suffix: " Airman Recruit", paygrade: swagger.E_1},
+	"CR": rate{prefix: "", suffix: " Constructionman Recruit", paygrade: swagger.E_1},
+	"FR": rate{prefix: "", suffix: " Fireman Recruit", paygrade: swagger.E_1},
+	"SR": rate{prefix: "", suffix: " Seaman Recruit", paygrade: swagger.E_1},
+	"AA": rate{prefix: "", suffix: " Airman Apprentice", paygrade: swagger.E_2},
+	"CA": rate{prefix: "", suffix: " Constructionman Apprentice", paygrade: swagger.E_2},
+	"FA": rate{prefix: "", suffix: " Fireman Apprentice", paygrade: swagger.E_2},
+	"SA": rate{prefix: "", suffix: " Seaman Apprentice", paygrade: swagger.E_2},
+	"AN": rate{prefix: "", suffix: " Airman", paygrade: swagger.E_3},
+	"CN": rate{prefix: "", suffix: " Constructionman", paygrade: swagger.E_3},
+	"FN": rate{prefix: "", suffix: " Fireman", paygrade: swagger.E_3},
+	"SN": rate{prefix: "", suffix: " Seaman", paygrade: swagger.E_3},
+	"3":  rate{prefix: "", suffix: " Third Class", paygrade: swagger.E_4},
+	"2":  rate{prefix: "", suffix: " Second Class", paygrade: swagger.E_5},
+	"1":  rate{prefix: "", suffix: " First Class", paygrade: swagger.E_6},
+	"C":  rate{prefix: "Chief ", suffix: "", paygrade: swagger.E_7},
+	"CS": rate{prefix: "Senior Chief ", suffix: "", paygrade: swagger.E_8},
+	"CM": rate{prefix: "Master Chief ", suffix: "", paygrade: swagger.E_9},
 }
 
 // RankFromAbbreviation returns the Rank corresponding to the provided abbreviation
-func RankFromAbbreviation(abbr string) *Rank {
+func RankFromAbbreviation(abbr string) *RankTitlePaygrade {
 	// try the officer and simple enlisted conversions first; they only take one step
 	r, ok := officerRanks[abbr]
 	if ok {
@@ -183,7 +187,7 @@ func RankFromAbbreviation(abbr string) *Rank {
 		return &r
 	}
 
-	rank := new(Rank)
+	rank := new(RankTitlePaygrade)
 
 	for key, rate := range enlistedRates {
 		if !strings.HasSuffix(abbr, key) {

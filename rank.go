@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/transcom/nom/pkg/swagger"
 )
 
-// Rank correlates a title with its DoD paygrade and indicates whether the rank belongs to a commissioned or warrant officer
+// RankTitlePaygrade correlates a title with its DoD paygrade and indicates whether the rank belongs to a commissioned or warrant officer
 type RankTitlePaygrade struct {
 	officer  bool
 	title    string
@@ -42,7 +44,7 @@ var bareEnlistedRanks = map[string]RankTitlePaygrade{
 	"AR":    RankTitlePaygrade{officer: false, title: "Airman Recruit", paygrade: swagger.E_1},
 	"CR":    RankTitlePaygrade{officer: false, title: "Constructionman Recruit", paygrade: swagger.E_1},
 	"FR":    RankTitlePaygrade{officer: false, title: "Fireman Recruit", paygrade: swagger.E_1},
-	"HR":    RankTitlePaygrade{officer: false, title: "Hospital Recruit", paygrade: swagger.E_1},
+	"HR":    RankTitlePaygrade{officer: false, title: "Hospitalman Recruit", paygrade: swagger.E_1},
 	"SR":    RankTitlePaygrade{officer: false, title: "Seaman Recruit", paygrade: swagger.E_1},
 	"AA":    RankTitlePaygrade{officer: false, title: "Airman Apprentice", paygrade: swagger.E_2},
 	"CA":    RankTitlePaygrade{officer: false, title: "Constructionman Apprentice", paygrade: swagger.E_2},
@@ -54,81 +56,83 @@ var bareEnlistedRanks = map[string]RankTitlePaygrade{
 	"FN":    RankTitlePaygrade{officer: false, title: "Fireman", paygrade: swagger.E_3},
 	"HN":    RankTitlePaygrade{officer: false, title: "Hospitalman", paygrade: swagger.E_3},
 	"SN":    RankTitlePaygrade{officer: false, title: "Seaman", paygrade: swagger.E_3},
-	"CMDCS": RankTitlePaygrade{officer: false, title: "Command Senior Chief Petty Officer", paygrade: swagger.E_8},
-	"CMDCM": RankTitlePaygrade{officer: false, title: "Command Master Chief Petty Officer", paygrade: swagger.E_9},
-	"FLTCM": RankTitlePaygrade{officer: false, title: "Fleet Master Chief Petty Officer", paygrade: swagger.E_9},
-	"FORCM": RankTitlePaygrade{officer: false, title: "Force Master Chief Petty Officer", paygrade: swagger.E_9},
-	"MCPON": RankTitlePaygrade{officer: false, title: "Navy Master Chief Petty Officer", paygrade: swagger.E_9},
+	"CMDCS": RankTitlePaygrade{officer: false, title: "Command Senior Chief", paygrade: swagger.E_8},
+	"CMDCM": RankTitlePaygrade{officer: false, title: "Command Master Chief", paygrade: swagger.E_9},
+	"CNOCM": RankTitlePaygrade{officer: false, title: "Chief of Naval Operations-Directed Master Chief", paygrade: swagger.E_9},
+	"FLTCM": RankTitlePaygrade{officer: false, title: "Fleet Master Chief", paygrade: swagger.E_9},
+	"FORCM": RankTitlePaygrade{officer: false, title: "Force Master Chief", paygrade: swagger.E_9},
+	"MCPON": RankTitlePaygrade{officer: false, title: "Master Chief Petty Officer of the Navy", paygrade: swagger.E_9},
 }
 
 var enlistedJobs = map[string]string{
 	"AB":  "Aviation Boatswain's Mate",
-	"ABE": "Aviation Boatswain's Mate",
-	"ABF": "Aviation Boatswain's Mate",
-	"ABH": "Aviation Boatswain's Mate",
+	"ABE": "Aviation Boatswain's Mate (Equipment)",
+	"ABF": "Aviation Boatswain's Mate (Fuels)",
+	"ABH": "Aviation Boatswain's Mate (Aircraft Handling)",
 	"AC":  "Air Traffic Controller",
 	"AD":  "Aviation Machinist's Mate",
 	"AE":  "Aviation Electrician's Mate",
 	"AF":  "Aircraft Maintenanceman",
 	"AG":  "Aerographer's Mate",
 	"AM":  "Aviation Structural Mechanic",
-	"AME": "Aviation Structural Mechanic",
+	"AME": "Aviation Structural Mechanic (Safety Equipment)",
 	"AO":  "Aviation Ordinanceman",
 	"AS":  "Aviation Support Equipment Technician",
 	"AT":  "Aviation Electronics Technician",
 	"AV":  "Avionics Technician",
-	"AWF": "Naval Aircrewman",
-	"AWO": "Naval Aircrewman",
-	"AWR": "Naval Aircrewman",
-	"AWS": "Naval Aircrewman",
-	"AWV": "Naval Aircrewman",
+	"AW":  "Naval Aircrewman",
+	"AWF": "Naval Aircrewman (Mechanical)",
+	"AWO": "Naval Aircrewman (Operator)",
+	"AWR": "Naval Aircrewman (Tactical Helicopter)",
+	"AWS": "Naval Aircrewman (Helicopter)",
+	"AWV": "Naval Aircrewman (Avionics)",
 	"AZ":  "Aviation Maintenance Administrationman",
 	"BM":  "Boatswain's Mate",
 	"BU":  "Builder",
 	"CE":  "Construction Electrician",
 	"CM":  "Construction Mechanic",
 	"CS":  "Culinary Specialist",
-	"CSS": "Culinary Specialist",
-	"CTI": "Cryptologic Technician",
-	"CTM": "Cryptologic Technician",
-	"CTN": "Cryptologic Technician",
-	"CTR": "Cryptologic Technician",
-	"CTT": "Cryptologic Technician",
+	"CSS": "Culinary Specialist (Submarine)",
+	"CTI": "Cryptologic Technician (Interpretive)",
+	"CTM": "Cryptologic Technician (Maintenance)",
+	"CTN": "Cryptologic Technician (Networks)",
+	"CTR": "Cryptologic Technician (Collection)",
+	"CTT": "Cryptologic Technician (Technical)",
 	"CU":  "Constructionman",
 	"DC":  "Damage Controlman",
 	"EA":  "Engineering Aide",
 	"EM":  "Electrician's Mate",
-	"EMN": "Electrician's Mate",
+	"EMN": "Electrician's Mate (Nuclear)",
 	"EN":  "Engineman",
 	"EO":  "Equipment Operator",
 	"EOD": "Explosive Ordinace Disposal",
 	"EQ":  "Equipmentman",
 	"ET":  "Electronics Technician",
-	"ETN": "Electronics Technician",
-	"ETR": "Electronics Technician",
-	"ETV": "Electronics Technician",
+	"ETN": "Electronics Technician (Nuclear Power)",
+	"ETR": "Electronics Technician (Submarine, Communications)",
+	"ETV": "Electronics Technician (Submarine, Navigation)",
 	"FC":  "Fire Controlman",
-	"FCA": "Fire Controlman",
+	"FCA": "Fire Controlman AEGIS",
 	"FT":  "Fire Control Technician",
 	"GM":  "Gunner's Mate",
 	"GS":  "Gas Turbine Systems Technician",
-	"GSE": "Gas Turbine Systems Technician",
-	"GSM": "Gas Turbine Systems Technician",
+	"GSE": "Gas Turbine Systems Technician (Electrical)",
+	"GSM": "Gas Turbine Systems Technician (Mechanical)",
 	"HM":  "Hospital Corpsman",
 	"HT":  "Hull Maintenance Technician",
 	"IC":  "Interior Communications Electrician",
 	"IS":  "Intelligence Specialist",
 	"IT":  "Information Systems Technician",
-	"ITS": "Information Systems Technician",
+	"ITS": "Information Systems Technician (Submarine)",
 	"LN":  "Legalman",
 	"LS":  "Logistics Specialist",
-	"LSS": "Logistics Specialist",
+	"LSS": "Logistics Specialist (Submarine)",
 	"MA":  "Master-At-Arms",
-	"MC":  "Mass Communications Specialist",
+	"MC":  "Mass Communication Specialist",
 	"MM":  "Machinist's Mate",
-	"MMA": "Machinist's Mate",
-	"MMN": "Machinist's Mate",
-	"MMW": "Machinist's Mate",
+	"MMA": "Machinist's Mate (Non-Nuclear Submarine Auxiliary)",
+	"MMN": "Machinist's Mate (Nuclear)",
+	"MMW": "Machinist's Mate (Non-Nuclear Submarine Weapons)",
 	"MN":  "Mineman",
 	"MR":  "Machinery Repairman",
 	"MT":  "Missile Technician",
@@ -144,13 +148,13 @@ var enlistedJobs = map[string]string{
 	"SB":  "Special Warfare Boat Operator",
 	"SH":  "Ship's Serviceman",
 	"SO":  "Special Warfare Operator",
-	"STG": "Sonar Technician",
-	"STS": "Sonar Technician",
+	"STG": "Sonar Technician (Surface)",
+	"STS": "Sonar Technician (Submarine)",
 	"SW":  "Steelworker",
 	"UC":  "Utilities Constructionman",
 	"UT":  "Utilitiesman",
 	"YN":  "Yeoman",
-	"YNS": "Yeoman",
+	"YNS": "Yeoman (Submarine)",
 }
 
 var enlistedRates = map[string]rate{
@@ -203,11 +207,13 @@ func RankFromAbbreviation(abbr string) *RankTitlePaygrade {
 			rank.title = rate.prefix + title + rate.suffix
 		} else {
 			// Uh-oh, unknown job! Just use the abbreviation as the title
+			fmt.Fprintf(os.Stderr, "Unable to fully parse RATE_RANK \"%s\", assuming paygrade of %s\n", abbr, rank.paygrade)
 			rank.title = abbr
 		}
 		return rank
 	}
 
 	// Uh-oh, unknown abbreviation!
+	fmt.Fprintf(os.Stderr, "Unknown RATE_RANK \"%s\"!\n", abbr)
 	return rank
 }

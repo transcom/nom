@@ -1,6 +1,6 @@
 # \OrdersApi
 
-All URIs are relative to *http://localhost/v0*
+All URIs are relative to *http://orders.move.mil/v0*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------

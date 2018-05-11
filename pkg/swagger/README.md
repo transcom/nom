@@ -17,7 +17,7 @@ Put the package under your project folder and add the following in import:
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *http://localhost/v0*
+All URIs are relative to *http://orders.move.mil/v0*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------

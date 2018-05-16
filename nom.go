@@ -103,7 +103,8 @@ func main() {
 
 		//ssn := record[fields["EMPLID"]]
 		//orderCntlNbr := record[fields["N_ORDER_CNTL_NBR"]]
-		// TODO construct new orders num by converting SSN to EDIPI, then combining that with the order_cntl_nbr expanded into the julian date concatenated with the 4 digit year
+		// TODO construct new orders num by converting SSN to EDIPI and converting the N_ORDER_CNTL_NBR to
+		// ISO 8601 date, combining the two as {iso8601date}-{edipi}
 
 		const usaDate = "1/2/06"
 		d, _ := time.Parse(usaDate, record[fields["N_ORD_DT"]])

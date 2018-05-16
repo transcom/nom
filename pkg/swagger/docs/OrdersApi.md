@@ -54,7 +54,7 @@ Optional parameters are passed through a map[string]interface{}.
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **ordersNum** | **string**| The Orders number as it appears on the Orders | 
+ **ordersNum** | **string**| Orders number, corresponding to the ORDERS number (Army), the CT SDN (Navy, Marines), the SPECIAL ORDER NO (Air Force), the Travel Order No (Coast Guard), or the Travel Authorization Number (Civilian). | 
  **edipi** | **string**| Electronic Data Interchange Personal Identifier, AKA the 10 digit DoD ID Number of the member | 
  **latestOnly** | **bool**| If true, look only at the latest Revision (by seqNum) of any set of Orders when applying the other Revision-specific parameters. If false, search all Revisions.  Defaults to false if omitted.  | 
  **status** | **string**| Return only Orders where the status of the latest Revision of the Orders matches the supplied status. | 
@@ -76,18 +76,18 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **PostRevision**
-> Orders PostRevision(ctx, ordersNum, edipi, issuingAuthority, revision)
+> Orders PostRevision(ctx, ordersNum, memberId, issuingAuthority, revision)
 Submit a new set of orders, make an amendment to an existing set of orders, or cancel a set of orders.
 
-Creates a Revision of a set of orders.  ## New Orders The supplied Revision is considered part of a new set of Orders if the supplied ordersNum has never been seen before for the supplied issuingAuthority. A new UUID is created and associated with a new Orders, which is returned along with the supplied Revision.  ## Amended Orders If the system determines that the supplied Revision is an amendment to an existing set of Orders, usually because the ordersNum already exists and the seqNum is unique, then the supplied Revision is added to the existing Orders.  Specifying the existing Orders' UUID is optional; clients are not required to remember the UUIDs returned with the Orders by previous calls to this API. If it is omitted, the system will attempt to locate the correct Orders using the ordersNum and issuingAuthority fields.  ## Canceled, Rescinded, or Revoked Orders To cancel, rescind, or revoke Orders, POST a new Revision with the status set to \"canceled\".  # Errors It is an error to specify an already-created seqNum in the provided Revision for an existing set of Orders. 
+Creates a Revision of a set of orders.  ## New Orders The supplied Revision is considered part of a new set of Orders if the combination of `ordersNum`, EDIPI, and `issuingAuthority` has never been seen before. A new UUID is created and associated with the Orders, which is returned along with the supplied Revision.  ## Amended Orders If the system determines that the supplied Revision is an amendment to an existing set of Orders, then the supplied Revision is added to the existing Orders.  If you stored the UUID of the Orders from a previous call to this API, you have the option of using the `POST /orders/{uuid}` API instead.   ## Canceled, Rescinded, or Revoked Orders To cancel, rescind, or revoke Orders, POST a new Revision with the status set to \"canceled\".  # Errors It is an error to specify an already-created seqNum in the provided Revision for an existing set of Orders. 
 
 ### Required Parameters
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **ctx** | **context.Context** | context for logging, tracing, authentication, etc.
-  **ordersNum** | **string**| The Orders number as it appears on the Orders | 
-  **edipi** | **string**| Electronic Data Interchange Personal Identifier, AKA the 10 digit DoD ID Number of the member | 
+  **ordersNum** | **string**| Orders number, corresponding to the ORDERS number (Army), the CT SDN (Navy, Marines), the SPECIAL ORDER NO (Air Force), the Travel Order No (Coast Guard), or the Travel Authorization Number (Civilian). | 
+  **memberId** | **string**| Electronic Data Interchange Personal Identifier of the member (preferred). If the member&#39;s EDIPI is unknown, then the Social Security Number may be provided instead. The Orders Gateway will then fetch the member&#39;s EDIPI using DMDC&#39;s Identity Web Services. Calls using the 9 digit SSN instead of the 10 digit EDIPI will take longer to respond due to the additional overhead.  | 
   **issuingAuthority** | **string**| Name of the Issuing Authority of the Orders. | 
   **revision** | [**Revision**](Revision.md)|  | 
 

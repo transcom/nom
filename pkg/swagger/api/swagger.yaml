@@ -93,7 +93,7 @@ paths:
         \ that the supplied Revision is an amendment to an existing set of Orders,\
         \ then the supplied Revision is added to the existing Orders.\n\nIf you stored\
         \ the UUID of the Orders from a previous call to this API, you have the option\
-        \ of using the `POST /orders/{uuid}` API instead. \n\n## Canceled, Rescinded,\
+        \ of using the `POST /orders/{uuid}` API instead.\n\n## Canceled, Rescinded,\
         \ or Revoked Orders\nTo cancel, rescind, or revoke Orders, POST a new Revision\
         \ with the status set to \"canceled\".\n\n# Errors\nIt is an error to specify\
         \ an already-created seqNum in the provided Revision for an existing set of\
@@ -266,7 +266,7 @@ definitions:
         type: "string"
         description: "Electronic Data Interchange Personal Identifier, AKA the 10\
           \ digit DoD ID Number of the member"
-        pattern: "^[0-9]{10}$"
+        pattern: "^\\d{10}$"
       issuingAuthority:
         type: "string"
         description: "Military Department or Civilian Agency that authorized these\
@@ -322,12 +322,12 @@ definitions:
         pcaWithoutPcs: true
         member:
           affiliation: {}
+          givenName: "givenName"
+          familyName: "familyName"
           rank: {}
-          given-name: "given-name"
-          middle-name: "middle-name"
+          middleName: "middleName"
           suffix: "suffix"
           title: "title"
-          family-name: "family-name"
         ntsAccounting:
           tac: "tac"
           sdn: "sdn"
@@ -375,12 +375,12 @@ definitions:
         pcaWithoutPcs: true
         member:
           affiliation: {}
+          givenName: "givenName"
+          familyName: "familyName"
           rank: {}
-          given-name: "given-name"
-          middle-name: "middle-name"
+          middleName: "middleName"
           suffix: "suffix"
           title: "title"
-          family-name: "family-name"
         ntsAccounting:
           tac: "tac"
           sdn: "sdn"
@@ -515,12 +515,12 @@ definitions:
       pcaWithoutPcs: true
       member:
         affiliation: {}
+        givenName: "givenName"
+        familyName: "familyName"
         rank: {}
-        given-name: "given-name"
-        middle-name: "middle-name"
+        middleName: "middleName"
         suffix: "suffix"
         title: "title"
-        family-name: "family-name"
       ntsAccounting:
         tac: "tac"
         sdn: "sdn"
@@ -549,20 +549,20 @@ definitions:
     type: "object"
     required:
     - "affiliation"
-    - "family-name"
-    - "given-name"
+    - "familyName"
+    - "givenName"
     - "rank"
     properties:
-      given-name:
+      givenName:
         type: "string"
         description: "In languages that use Western order, like English, this is the\
           \ first name."
-      family-name:
+      familyName:
         type: "string"
         description: "In languages that use Western order, like English, this is the\
           \ last name. NOTE: some services lump suffixes (like Jr. or Sr.) in with\
           \ the family name!"
-      middle-name:
+      middleName:
         type: "string"
         description: "Middle name or middle initial"
       suffix:
@@ -582,12 +582,12 @@ definitions:
           \ use the default name for the rank for the provided affiliation.\n"
     example:
       affiliation: {}
+      givenName: "givenName"
+      familyName: "familyName"
       rank: {}
-      given-name: "given-name"
-      middle-name: "middle-name"
+      middleName: "middleName"
       suffix: "suffix"
       title: "title"
-      family-name: "family-name"
   TourType:
     type: "string"
     description: "Accompanied or Unaccompanied; i.e., are dependents authorized to\

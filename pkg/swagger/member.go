@@ -12,13 +12,13 @@ package swagger
 type Member struct {
 
 	// In languages that use Western order, like English, this is the first name.
-	GivenName string `json:"given-name"`
+	GivenName string `json:"givenName"`
 
 	// In languages that use Western order, like English, this is the last name. NOTE: some services lump suffixes (like Jr. or Sr.) in with the family name!
-	FamilyName string `json:"family-name"`
+	FamilyName string `json:"familyName"`
 
 	// Middle name or middle initial
-	MiddleName string `json:"middle-name,omitempty"`
+	MiddleName string `json:"middleName,omitempty"`
 
 	// Jr., Sr., III, etc.
 	Suffix string `json:"suffix,omitempty"`

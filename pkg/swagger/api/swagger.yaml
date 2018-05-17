@@ -2,7 +2,7 @@
 swagger: "2.0"
 info:
   description: "API to submit, amend, and cancel orders for move.mil."
-  version: "0.0.4"
+  version: "0.0.5"
   title: "MyMove Orders Gateway"
   license:
     name: "MIT"
@@ -57,12 +57,12 @@ paths:
         - "authorized"
         - "canceled"
         x-exportParamName: "Status"
-      - name: "issuingAuthority"
+      - name: "issuer"
         in: "query"
-        description: "Name of the Issuing Authority of the Orders."
+        description: "Name of the organization that issued the Orders."
         required: false
         type: "string"
-        x-exportParamName: "IssuingAuthority"
+        x-exportParamName: "Issuer"
       responses:
         200:
           description: "Successful"
@@ -124,12 +124,6 @@ paths:
         type: "string"
         pattern: "^\\d{9}\\d?$"
         x-exportParamName: "MemberId"
-      - name: "issuingAuthority"
-        in: "query"
-        description: "Name of the Issuing Authority of the Orders."
-        required: true
-        type: "string"
-        x-exportParamName: "IssuingAuthority"
       - in: "body"
         name: "revision"
         required: true
@@ -187,7 +181,9 @@ paths:
         \ the supplied Revision must be unique, and not already present in the Orders.\
         \ Nothing else is required to change in the Revision compared to any other\
         \ Revision in the Orders.\n\n## Errors\nIt is an error to specify a non-existent\
-        \ UUID.\n\nIt is an error to specify an already-created seqNum in the Revision.\n"
+        \ UUID.\n\nIt is an error to specify an already-created seqNum in the Revision.\n\
+        \nIt is an error to specify a UUID for orders originally created by a different\
+        \ issuer.\n"
       operationId: "postRevisionToOrders"
       consumes:
       - "application/json"
@@ -227,7 +223,7 @@ definitions:
     type: "object"
     required:
     - "edipi"
-    - "issuingAuthority"
+    - "issuer"
     - "ordersNum"
     - "revisions"
     properties:
@@ -267,17 +263,18 @@ definitions:
         description: "Electronic Data Interchange Personal Identifier, AKA the 10\
           \ digit DoD ID Number of the member"
         pattern: "^\\d{10}$"
-      issuingAuthority:
+      issuer:
         type: "string"
         description: "Military Department or Civilian Agency that authorized these\
           \ orders; e.g., Department of the Army, Department of the Navy, Defense\
-          \ Information Systems Agency (DISA), etc."
+          \ Information Systems Agency (DISA), etc. The issuer is inferred by the\
+          \ system when the Orders are first created, based on the authenticated client\
+          \ certificate."
       revisions:
         type: "array"
         items:
           $ref: "#/definitions/Revision"
     example:
-      issuingAuthority: "issuingAuthority"
       ordersNum: "030-00362 (Army), 0302018 9876543210 (Navy, after transformation),\
         \ M7000213CTB28DZ (Marines), AJ-063322 (Air Force), 1214G85PRAAGK000 (Coast\
         \ Guard), PS8D000025 (Civilian)"
@@ -390,6 +387,7 @@ definitions:
         status: "authorized"
       uuid: "80200fa9-4ee2-49c5-b4fd-88b3ef4bd5eb"
       edipi: "edipi"
+      issuer: "issuer"
   Revision:
     type: "object"
     required:
@@ -400,15 +398,13 @@ definitions:
     - "ordersType"
     - "reportNoLaterThan"
     - "seqNum"
-    - "status"
     properties:
       seqNum:
         type: "integer"
-        description: "Sequence number. When an order is amended, it should get a higher\
-          \ sequence number than all previous revisions of the same orders. The orders\
-          \ with the highest sequence number is considered the current, authoritative\
-          \ version, even if its dateIssued is earlier.\n\nThe sequence number is\
-          \ NOT required to increase monotonically or sequentially; in other words,\
+        description: "Sequence number. As Orders are amended, the Revision with the\
+          \ highest sequence number is considered the current, authoritative version\
+          \ of the Orders, even if its dateIssued is earlier.\n\nThe sequence number\
+          \ is NOT required to increase monotonically or sequentially; in other words,\
           \ if a set of orders is modified twice, the sequence numbers could be 1,\
           \ 5858300, and 30.\n"
         minimum: 0
@@ -416,14 +412,16 @@ definitions:
         $ref: "#/definitions/Member"
       status:
         type: "string"
-        description: "Indicates whether these Orders are authorized or canceled."
+        description: "Indicates whether these Orders are authorized or canceled. If\
+          \ omitted, then these Orders are assumed to be authorized."
         enum:
         - "authorized"
         - "canceled"
       dateIssued:
         type: "string"
         format: "date-time"
-        description: "The date and time that these orders were cut."
+        description: "The date and time that these orders were cut. If omitted, the\
+          \ current date and time will be used."
       pcaWithoutPcs:
         type: "boolean"
         description: "Permanent Change of Assignment without Permanent Change of Station.\
@@ -436,16 +434,16 @@ definitions:
           \ and vice-versa.\n"
       tdyEnRoute:
         type: "boolean"
-        description: "TDY (Temporary Duty Yonder) en-route.\nIf omitted, assume false.\n"
+        description: "TDY (Temporary Duty Yonder) en-route. If omitted, assume false."
       tourType:
         $ref: "#/definitions/TourType"
       ordersType:
         $ref: "#/definitions/OrdersType"
       hasDependents:
         type: "boolean"
-        description: "True if the service member has dependents (e.g., spouse, children,\
-          \ caring for an elderly parent, etc.), False otherwise.\n\nWhen the member\
-          \ has dependents, it usually raises their weight entitlement.\n"
+        description: "True if the service member has any dependents (e.g., spouse,\
+          \ children, caring for an elderly parent, etc.), False otherwise.\n\nWhen\
+          \ the member has dependents, it usually raises their weight entitlement.\n"
       losingUnit:
         $ref: "#/definitions/Unit"
       gainingUnit:
@@ -454,7 +452,8 @@ definitions:
         type: "string"
         format: "date"
         description: "Earliest date that the service member is allowed to report for\
-          \ duty at the new duty station."
+          \ duty at the new duty station. If omitted, the member is allowed to report\
+          \ as early as desired."
       reportNoLaterThan:
         type: "string"
         format: "date"
@@ -560,8 +559,7 @@ definitions:
       familyName:
         type: "string"
         description: "In languages that use Western order, like English, this is the\
-          \ last name. NOTE: some services lump suffixes (like Jr. or Sr.) in with\
-          \ the family name!"
+          \ last name."
       middleName:
         type: "string"
         description: "Middle name or middle initial"
@@ -575,11 +573,13 @@ definitions:
       title:
         type: "string"
         description: "If supplied, this is the preferred form of address or preferred\
-          \ human-readable rank. This is especially useful when a rank has multiple\
+          \ human-readable title. This is especially useful when a rank has multiple\
           \ possible titles. For example, in the Army, an E-4 can be either a Specialist\
-          \ or a Corporal. In the Marine Corps, an E-8 can be either a Master Sergeant\
-          \ or a First Sergeant, and they do care about the distinction.\n\nIf omitted,\
-          \ use the default name for the rank for the provided affiliation.\n"
+          \ or a Corporal. In the Navy, there are dozens of possible job titles and\
+          \ ratings for enlisted sailors. In the Marine Corps, an E-8 can be either\
+          \ a Master Sergeant or a First Sergeant, and they do care about the distinction.\n\
+          \nIf omitted, MyMove will show the member the default name for the provided\
+          \ rank and affiliation.\n"
     example:
       affiliation: {}
       givenName: "givenName"
@@ -644,8 +644,8 @@ definitions:
       unit-move: "Unit Move"
   Rank:
     type: "string"
-    description: "Rank of the service member. Some of these ranks will have identical\
-      \ entitlements."
+    description: "DoD paygrade or rank of the service member. Some of these ranks\
+      \ will have identical entitlements."
     enum:
     - "aviation-cadet"
     - "cadet"

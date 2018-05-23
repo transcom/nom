@@ -2,7 +2,7 @@
 swagger: "2.0"
 info:
   description: "API to submit, amend, and cancel orders for move.mil."
-  version: "0.0.5"
+  version: "0.0.6"
   title: "MyMove Orders Gateway"
   license:
     name: "MIT"
@@ -289,8 +289,8 @@ definitions:
         seqNum: 0
         gainingUnit:
           country: "country"
-          postal-code: "postal-code"
           city: "city"
+          postalCode: "postalCode"
           name: "name"
           locality: "locality"
           uic: "uic"
@@ -307,8 +307,8 @@ definitions:
           loa: "loa"
         losingUnit:
           country: "country"
-          postal-code: "postal-code"
           city: "city"
+          postalCode: "postalCode"
           name: "name"
           locality: "locality"
           uic: "uic"
@@ -342,8 +342,8 @@ definitions:
         seqNum: 0
         gainingUnit:
           country: "country"
-          postal-code: "postal-code"
           city: "city"
+          postalCode: "postalCode"
           name: "name"
           locality: "locality"
           uic: "uic"
@@ -360,8 +360,8 @@ definitions:
           loa: "loa"
         losingUnit:
           country: "country"
-          postal-code: "postal-code"
           city: "city"
+          postalCode: "postalCode"
           name: "name"
           locality: "locality"
           uic: "uic"
@@ -396,7 +396,6 @@ definitions:
     - "losingUnit"
     - "member"
     - "ordersType"
-    - "reportNoLaterThan"
     - "seqNum"
     properties:
       seqNum:
@@ -458,7 +457,8 @@ definitions:
         type: "string"
         format: "date"
         description: "Latest date that the service member is allowed to report for\
-          \ duty at the new duty station."
+          \ duty at the new duty station. Should be included for most Orders types,\
+          \ but can be missing for Separation / Retirement Orders."
       pcsAccounting:
         $ref: "#/definitions/Accounting"
       ntsAccounting:
@@ -484,8 +484,8 @@ definitions:
       seqNum: 0
       gainingUnit:
         country: "country"
-        postal-code: "postal-code"
         city: "city"
+        postalCode: "postalCode"
         name: "name"
         locality: "locality"
         uic: "uic"
@@ -502,8 +502,8 @@ definitions:
         loa: "loa"
       losingUnit:
         country: "country"
-        postal-code: "postal-code"
         city: "city"
+        postalCode: "postalCode"
         name: "name"
         locality: "locality"
         uic: "uic"
@@ -710,7 +710,7 @@ definitions:
       tac:
         type: "string"
         description: "Transportation Account Code - a reference to a line of accounting\
-          \ in the Transportation Global Edit Tables (TGET). This is the most common\
+          \ in the Transportation Global Edit Tables (TGET). This is the preferred\
           \ way to charge a move expense to the correct pool of money.\n\n> TGET is\
           \ a centralized repository that contains established transportation LOAs\
           \ formatted in accordance with Service/Agency LOA requirements and associated\
@@ -745,16 +745,14 @@ definitions:
           \ to include this unique value with every expense in the resulting report.\n"
       loa:
         type: "string"
-        description: "The full Line Of Accounting. Use this if no TAC is supplied."
+        description: "The full Line Of Accounting. LOA is required if there is no\
+          \ TAC."
     example:
       tac: "tac"
       sdn: "sdn"
       loa: "loa"
   Unit:
     type: "object"
-    required:
-    - "city"
-    - "postal-code"
     properties:
       name:
         type: "string"
@@ -775,15 +773,18 @@ definitions:
           \ available."
       country:
         type: "string"
-        description: "ISO 3166-1 alpha-2 country code. If blank, assume US"
+        description: "ISO 3166-1 alpha-2 country code. If blank, but city and locality\
+          \ or postalCode are not blank, assume US"
         pattern: "^[A-Z]{2}$"
-      postal-code:
+      postalCode:
         type: "string"
         description: "In the USA, this is the ZIP Code."
+    description: "Information about either the losing or gaining Unit. If these are\
+      \ separation orders, the location information for the gaining Unit may be blank."
     example:
       country: "country"
-      postal-code: "postal-code"
       city: "city"
+      postalCode: "postalCode"
       name: "name"
       locality: "locality"
       uic: "uic"

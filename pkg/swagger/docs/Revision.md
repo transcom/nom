@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 **LosingUnit** | [***Unit**](Unit.md) |  | [default to null]
 **GainingUnit** | [***Unit**](Unit.md) |  | [default to null]
 **ReportNoEarlierThan** | **string** | Earliest date that the service member is allowed to report for duty at the new duty station. If omitted, the member is allowed to report as early as desired. | [optional] [default to null]
-**ReportNoLaterThan** | **string** | Latest date that the service member is allowed to report for duty at the new duty station. | [default to null]
+**ReportNoLaterThan** | **string** | Latest date that the service member is allowed to report for duty at the new duty station. Should be included for most Orders types, but can be missing for Separation / Retirement Orders. | [optional] [default to null]
 **PcsAccounting** | [***Accounting**](Accounting.md) |  | [optional] [default to null]
 **NtsAccounting** | [***Accounting**](Accounting.md) |  | [optional] [default to null]
 **PovShipmentAccounting** | [***Accounting**](Accounting.md) |  | [optional] [default to null]

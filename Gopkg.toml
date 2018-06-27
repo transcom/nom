@@ -1,0 +1,11 @@
+required = [
+	"github.com/go-swagger/go-swagger/cmd/swagger",
+	]
+
+[[constraint]]
+  name = "github.com/go-swagger/go-swagger"
+  branch = "master"
+
+[prune]
+  go-tests = true
+  unused-packages = true

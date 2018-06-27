@@ -1,10 +1,26 @@
 # Navy Orders Muncher
 
-**nom**, the Navy Orders Muncher, ingests CSV files containing Navy Orders and excretes database updates to the move.mil Orders API.
+`**nom**`, the Navy Orders Muncher, ingests CSV files containing Navy Orders and excretes database updates to the move.mil Orders API.
 
 # Usage
 
-`$ nom <csv input> `
+`$ nom <csv input file>`
+
+# Building
+
+Building is easy! Once you have the dependencies, run
+
+`$ make`
+
+## Dependencies
+
+`**nom**` is written in [Go](https://golang.org/). Aside from go, you will need:
+
+- [GNU Make](https://www.gnu.org/software/make/)
+- [dep](https://golang.github.io/dep/)
+- [curl](https://curl.haxx.se/)
+
+Acquiring and installing these is left as an exercise for the reader.
 
 # Input format
 
@@ -12,45 +28,47 @@
 
 | Column Name | Description |
 | ----------- | ----------- |
-| EMPLID | If 9 digits, Social Security Number<br>If 10 digits, EDIPI |
-| N_ORDER_CNTL_NBR | Julian day of the year (1-366) followed by last digit of the year (e.g., 8 for 2018). |
-| N_ORD_DT | Orders date |
-| N_MOD_NBR | Number of modifications made by an Orders Writing System, such as EAIS, OAIS, or NMCMPS. |
-| N_MOD_NUM	| Number of modifications made manually via POEMS. |
-| N_OBLG_STATUS	| **D**: Cancel Obligation, effectively rescinding these Orders<br>**N**: Initial Mod - amended Orders<br>**P**: Initial Obligation - new Orders|
-| N_OBLG_LEG_NBR | Indicates whether any TDY is  included in these Orders.<br>**0** - Perm to Perm<br>**1** - Perm to Temp<br>**5** - Temp to Temp<br>**9** - Temp to Perm |
-| N_CIC_PURP | Purpose of the Orders, maps to Orders type |
-| N_RATE_RANK | The Navy abbreviation of the rank / title |
-| NAME | The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix) |
-| N_UIC_DETACH | Unit Identification Code (UIC) of the detaching activity |
-| N_DET_HPORT | Home port of the detaching activity |
-| N_PDS_CITY | Detaching activity city |
-| N_PDS_STATE | Detaching activity state |
-| N_PDS_CNTRY | Detaching activity country |
-| N_EST_ARRIVAL_DT | Despite the name, this is the Report No Later Than Date |
-| N_UIC_ULT_DTY_STA	| Unit Identification Code (UIC) of the ultimate activity |
-| N_ULT_HPORT | Home port of the ultimate activity |
-| N_ULT_CITY | Ultimate activity city |
-| N_ULT_STATE | Ultimate activity state |
-| N_ULT_CNTRY | Ultimate activity country |
-| N_NON_ENT_IND | If 'Y', then this is a 'Cost Order' with obligated moving expenses. If 'N', then this is a 'No Cost Order', i.e., a PCA w/o PCS (Permanent Change of Assignment without Permanent Change of Station), and has no moving expenses. |
-| N_NUM_DEPN | Despite the name, this column contains either 'Y' or 'N' to indicate whether the sailor has dependents |
-| TAC_SDN | Household Goods (HHG) Standard Document Number (SDN), which also incorporates the HHG Transportation Account Code (TAC) as its last four characters |
+| Ssn (obligation) | If 9 digits, Social Security Number<br>If 10 digits, EDIPI |
+| TAC | Household Goods (HHG) Transportation Account Code (TAC) |
+| Order Create/Modification Date | Orders date, in Excel date format (Day 1 = Dec 31, 1899) |
+| Order Modification Number | Number of modifications made by an Orders Writing System, such as EAIS, OAIS, or NMCMPS. |
+| Obligation Modification Number | Number of modifications made manually via POEMS. |
+| Obligation Status Code | **D**: Cancel Obligation, effectively rescinding these Orders<br>**N**: Initial Mod - amended Orders<br>**P**: Initial Obligation - new Orders|
+| Obligation Multi-leg Code | Indicates whether either endpoint is TDY.<br>**0** - Perm to Perm<br>**1** - Perm to Temp<br>**5** - Temp to Temp<br>**9** - Temp to Perm |
+| CIC Purpose Information Code (OBLGTN) | Purpose of the Orders, maps to Orders type |
+| Paygrade | Three-character DoD Paygrade, e.g., E05, W02, O10 |
+| Rank Classification  Description | The Navy rank or rating |
+| Service Member Name | The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix) |
+| Detach UIC | Unit Identification Code (UIC) of the detaching activity |
+| Detach UIC Home Port | Home port of the detaching activity |
+| Detach UIC City Name | Detaching activity city |
+| Detach State Code | Detaching activity state |
+| Detach Country Code | Detaching activity country |
+| Ultimate Estimated Arrival Date | Report No Later Than Date |
+| Ultimate UIC	| Unit Identification Code (UIC) of the ultimate activity |
+| Ultimate UIC Home Port | Home port of the ultimate activity |
+| Ultimate UIC City Name | Ultimate activity city |
+| Ultimate State Code | Ultimate activity state |
+| Ultimate Country Code | Ultimate activity country |
+| Entitlement Indicator | If 'Y', then this is a 'Cost Order' with obligated moving expenses. If 'N', then this is a 'No Cost Order'. |
+| Count of Dependents Participating in Move (STATIC) | Number of sailor's dependents; needed to determine the correct weight entitlement |
+| Count of Intermediate Stops (STATIC) | Number of intermediate activities. If greater than 0, then this move has TDY en route. |
+| Primary SDN | The Commercial Travel (CT) Standard Document Number (SDN), which `nom` uses as the unique Orders number |
 
 Columns that do not start with the above headers are ignored.
 
 ## Orders number
-On printed Navy Orders, the BUPERS Orders number is originally formatted as "`<N_ORDER_CNTL_NBR> <EMPLID>`", for example, "`3108 000-12-3456`". It would be unique (because of the SSN), except that it’s possible for a set of orders to be cut on the same day 10 years later for the same sailor, resulting in a collision.
+On printed Navy Orders, the BUPERS Orders number is originally formatted as "`<Order Control Number> <SSN>`", for example, "`3108 000-12-3456`". It would be unique (because of the SSN), except that it’s possible for a set of orders to be cut on the same day 10 years later for the same sailor, resulting in a collision.
 
-Because the BUPERS Orders Number contains PII (the SSN) and could potentially not be unique (because it only allows a single digit for the year), the Orders API expects the Orders number to be reformatted as "`{Julian day}{4 digit year} {EDIPI}`", for example, "`3102018 0123456789`". The full 4 digit year can be found in the N_ORD_DT field of the first revision, while the EDIPI can be retrieved using DMDC's Identity Web Services.
+Because the BUPERS Orders Number contains PII (the SSN) and could potentially not be unique (because it only allows a single digit for the year), `**nom**` uses the Primary SDN (aka the Commercial Travel SDN) instead. For what it's worth, Marine Corps orders also use the CT SDN as the unique Orders number.
 
 ## Modification number interpretation
-The Orders API has a sequence number to indicate the chronology of amendments to a set of Orders. The input, however, has two modification number fields: `N_MOD_NUM` and `N_MOD_NBR`. Fortunately, these two fields increment atomically, and never decrement.
+The Orders API has a sequence number to indicate the chronology of amendments to a set of Orders. The input, however, has two modification number fields, which track the modification count from different systems. Fortunately, these two fields increment atomically, and never decrement.
 
-Therefore, the sequence number is simply the sum of `N_MOD_NUM` and `N_MOD_NBR`.
+Therefore, the sequence number is simply the sum of these two numbers.
 
 ## Orders type
-To determine the effective orders type, lookup the purpose (`N_CIC_PURP`) and community (enlisted or officer) in the following table.
+To determine the effective orders type, lookup the CIC Purpose Information Code and community (enlisted or officer) in the following table.
 
 | N_CIC_PURP | Enlisted / Officer | Description | Effective Orders Type |
 | ---------- | ------------------ | ----------- | --------------------- |
@@ -91,154 +109,6 @@ To determine the effective orders type, lookup the purpose (`N_CIC_PURP`) and co
 | X | Officer | Misc. Rotational Non-member | rotational |
 | Y | Enlisted | Misc. Rotational Non-member | rotational |
 | Z | Enlisted | NAVCAD(Naval Cadet) Separation | separation |
-
-## Ranks
-The `N_RATE_RANK` column contains Navy rank (officer) and rate (enlisted) abbreviations. These abbreviations need to be translated to titles and DoD pay grades.
-
-### Enlisted Rates
-To determine the title and pay grade for enlisted rates, if the abbreviation does not have a simple translation, then match the rating suffix to first match the stem of the abbreviation to the job title, and then determine the prefix or suffix of the title using the remainder of the abbreviation in the rates table.
-
-#### Bare enlisted rates and paygrades
-The most senior enlisted rates have a simple translation from abbreviation to title and pay grade.
-
-The lowest enlisted paygrades without ratings are also easy to translate.
-
-| Abbreviation | Title | DoD Pay Grade |
-| ------------ | ----- | ------------- |
-| AR | Airman Recruit | E-1 |
-| CR | Constructionman Recruit | E-1 |
-| FR | Fireman Recruit | E-1 |
-| HR | Hospital Recruit | E-1 |
-| SR | Seaman Recruit | E-1 |
-| AA | Airman Apprentice | E-2 |
-| CA | Constructionman Apprentice | E-2 |
-| FA | Fireman Apprentice | E-2 |
-| HA | Hospitalman Apprentice | E-2 |
-| SA | Seaman Apprentice | E-2 |
-| AN | Airman | E-3 |
-| CN | Constructionman | E-3 |
-| FN | Fireman | E-3 |
-| HN | Hospitalman | E-3 |
-| SN | Seaman | E-3 |
-| CMDCS | Command Senior Chief Petty Officer | E-8 |
-| CMDCM | Command Master Chief Petty Officer | E-9 |
-| FLTCM | Fleet Master Chief Petty Officer | E-9 |
-| FORCM | Force Master Chief Petty Officer | E-9 |
-| MCPON | Navy Master Chief Petty Officer | E-9 |
-
-#### Enlisted Ratings
-| Abbreviation | Title |
-| ----------- | ------ |
-| AB<br>ABE<br>ABF<br>ABH | Aviation Boatswain's Mate |
-| AC | Air Traffic Controller |
-| AD | Aviation Machinist's Mate |
-| AE | Aviation Electrician's Mate |
-| AF | Aircraft Maintenanceman |
-| AG | Aerographer's Mate |
-| AM<br>AME | Aviation Structural Mechanic |
-| AO | Aviation Ordinanceman |
-| AS | Aviation Support Equipment Technician |
-| AT | Aviation Electronics Technician |
-| AV | Avionics Technician |
-| AWO<br>AWF<br>AWV<br>AWS<br>AWR | Naval Aircrewman |
-| AZ | Aviation Maintenance Administrationman |
-| BM | Boatswain's Mate |
-| BU | Builder |
-| CE | Construction Electrician |
-| CM | Construction Mechanic |
-| CS<br>CSS | Culinary Specialist |
-| CTI<br>CTM<br>CTN<br>CTR<br>CTT | Cryptologic Technician |
-| CU | Constructionman |
-| DC | Damage Controlman |
-| EA | Engineering Aide |
-| EM<br>EMN | Electrician's Mate |
-| EN | Engineman |
-| EO | Equipment Operator |
-| EOD | Explosive Ordinance Disposal |
-| EQ | Equipmentman |
-| ET<br>ETN<br>ETV<br>ETR | Electronics Technician |
-| FC<br>FCA | Fire Controlman |
-| FT | Fire Control Technician |
-| GM | Gunner's Mate |
-| GS<br>GSE<br>GSM | Gas Turbine Systems Technician |
-| HM | Hospital Corpsman |
-| HT | Hull Maintenance Technician |
-| IC | Interior Communications Electrician |
-| IS | Intelligence Specialist |
-| IT<br>ITS | Information Systems Technician |
-| LN | Legalman |
-| LS<br>LSS | Logistics Specialist |
-| MA | Master-At-Arms |
-| MC | Mass Communications Specialist |
-| MM<br>MMA<br>MMN<br>MMW | Machinist's Mate |
-| MN | Mineman |
-| MR | Machinery Repairman |
-| MT | Missile Technician |
-| MU | Musician |
-| NC | Navy Counselor |
-| ND | Navy Diver |
-| OS | Operations Specialist |
-| PR | Aircrew Survival Equipmentman |
-| PS | Personnel Specialist |
-| QM | Quartermaster |
-| RP | Religious Program Specialist |
-| RT | Repair Technician |
-| SB | Special Warfare Boat Operator |
-| SH | Ship's Serviceman |
-| SO | Special Warfare Operator |
-| STG<br>STS | Sonar Technician |
-| SW | Steelworker |
-| UC | Utilities Constructionman |
-| UT | Utilitiesman |
-| YN<br>YNS | Yeoman |
-
-#### Enlisted paygrades
-Paygrades E-1 through E-3 can also have a rating abbreviation preceding their paygrade symbol if they are graduates of Class "A" schools; have received the rating designation in a previous enlistment; are assigned to a billet in that specialty as a striker; have passed an advancement examination and not been selected for advancement for reasons of numeric limitations on advancements; or have been reduced in rate because of punishment.
-
-| Abbreviation | Title prefix | Title suffix | DoD Pay Grade |
-| ------------ | ------------ | ------------ | -------------- |
-| AR | | Airman Recruit | E-1 |
-| CR | | Constructionman Recruit | E-1 |
-| FR | | Fireman Recruit | E-1 |
-| SR | | Seaman Recruit | E-1 |
-| AA | | Airman Apprentice | E-2 |
-| CA | | Constructionman Apprentice | E-2 |
-| FA | | Fireman Apprentice | E-2 |
-| SA | | Seaman Apprentice | E-2 |
-| AN | | Airman | E-3 |
-| CN | | Constructionman | E-3 |
-| FN | | Fireman | E-3 |
-| SN | | Seaman | E-3 |
-| 3 | | Third Class | E-4 |
-| 2 | | Second Class | E-5 |
-| 1 | | First Class | E-6 |
-| C | Chief | | E-7 |
-| CS | Senior Chief | | E-8 |
-| CM | Master Chief | | E-9 |
-
-### Officer Ranks
-| Abbreviation | Title | DoD Pay Grade |
-| ------------ | ----- | ------------- |
-| OC | Officer Candidate | E-5 |
-| ENS | Ensign | O-1 |
-| LTJG | Lieutenant Junior Grade | O-2 |
-| LT | Lieutenant | O-3 |
-| LCDR | Lieutenant Commander | O-4 |
-| CDR | Commander | O-5	|
-| CAPT | Captain | O-6 |
-| RDML | Rear Admiral (lower half) | O-7 |
-| RDMU | Rear Admiral (upper half) | O-8 |
-| VADM | Vice Admiral | O-9 |
-| ADM | Admiral | O-10 |
-
-### Warrant Officer Ranks
-| Abbreviation | Title | DoD Pay Grade |
-| ----------- | ----- | ------------- |
-| WO1 | Warrant Officer | W-1 |
-| CWO2 | Chief Warrant Officer | W-2 |
-| CWO3 | Chief Warrant Officer | W-3 |
-| CWO4 | Chief Warrant Officer | W-4 |
-| CWO5 | Chief Warrant Officer | W-5 |
 
 # Output
 nom uploads the Orders it reads to the move.mil Orders API.

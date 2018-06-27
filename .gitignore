@@ -18,3 +18,8 @@ debug
 
 # VS Code project info
 .vscode
+pkg/gen
+swagger
+orders.yaml
+nom
+vendor

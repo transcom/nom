@@ -60,7 +60,7 @@ Columns that do not start with the above headers are ignored.
 ## Orders number
 On printed Navy Orders, the BUPERS Orders number is originally formatted as "`<Order Control Number> <SSN>`", for example, "`3108 000-12-3456`". It would be unique (because of the SSN), except that it’s possible for a set of orders to be cut on the same day 10 years later for the same sailor, resulting in a collision.
 
-Because the BUPERS Orders Number contains PII (the SSN) and could potentially not be unique (because it only allows a single digit for the year), `**nom**` uses the Primary SDN (aka the Commercial Travel SDN) instead. For what it's worth, Marine Corps orders also use the CT SDN as the unique Orders number.
+Because the BUPERS Orders Number contains PII (the SSN) and could potentially not be unique (because it only allows a single digit for the year), **nom** uses the Primary SDN (aka the Commercial Travel SDN) instead. For what it's worth, Marine Corps orders also use the CT SDN as the unique Orders number.
 
 ## Modification number interpretation
 The Orders API has a sequence number to indicate the chronology of amendments to a set of Orders. The input, however, has two modification number fields, which track the modification count from different systems. Fortunately, these two fields increment atomically, and never decrement.

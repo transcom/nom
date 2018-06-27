@@ -1,6 +1,6 @@
 # Navy Orders Muncher
 
-`**nom**`, the Navy Orders Muncher, ingests CSV files containing Navy Orders and excretes database updates to the move.mil Orders API.
+**nom**, the Navy Orders Muncher, ingests CSV files containing Navy Orders and excretes database updates to the move.mil Orders API.
 
 # Usage
 
@@ -14,7 +14,7 @@ Building is easy! Once you have the dependencies, run
 
 ## Dependencies
 
-`**nom**` is written in [Go](https://golang.org/). Aside from go, you will need:
+**nom** is written in [Go](https://golang.org/). Aside from go, you will need:
 
 - [GNU Make](https://www.gnu.org/software/make/)
 - [dep](https://golang.github.io/dep/)
@@ -53,7 +53,7 @@ Acquiring and installing these is left as an exercise for the reader.
 | Entitlement Indicator | If 'Y', then this is a 'Cost Order' with obligated moving expenses. If 'N', then this is a 'No Cost Order'. |
 | Count of Dependents Participating in Move (STATIC) | Number of sailor's dependents; needed to determine the correct weight entitlement |
 | Count of Intermediate Stops (STATIC) | Number of intermediate activities. If greater than 0, then this move has TDY en route. |
-| Primary SDN | The Commercial Travel (CT) Standard Document Number (SDN), which `nom` uses as the unique Orders number |
+| Primary SDN | The Commercial Travel (CT) Standard Document Number (SDN), which **nom** uses as the unique Orders number |
 
 Columns that do not start with the above headers are ignored.
 

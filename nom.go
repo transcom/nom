@@ -57,7 +57,6 @@ func main() {
 		rev.Member = new(models.Member)
 		rev.Member.Affiliation = models.AffiliationNavy
 		// The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix)
-		// TODO - when we get appropriately formatted files, parse the name into its components
 		fullname := record[fields["Service Member Name"]]
 		names := strings.SplitN(fullname, ",", 2)
 		rev.Member.FamilyName = new(string)

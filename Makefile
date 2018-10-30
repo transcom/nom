@@ -9,7 +9,7 @@ pkg/gen/ordersapi: orders.yaml bin/swagger
 # Instead of using a git submodule to get all of mymove for just one file, use
 # curl to fetch the latest from github
 orders.yaml:
-	curl -o $@ https://raw.githubusercontent.com/transcom/mymove/orders-api-draft/swagger/orders.yaml
+	curl -o $@ https://raw.githubusercontent.com/transcom/mymove/master/swagger/orders.yaml
 
 bin/swagger: vendor/github.com/go-swagger/go-swagger
 	go build -i -o bin/swagger ./vendor/github.com/go-swagger/go-swagger/cmd/swagger

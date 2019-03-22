@@ -1,4 +1,4 @@
-nom: pkg/gen/ordersapi $(wildcard *.go)
+nom: pkg/gen/ordersapi
 	go build
 
 pkg/gen/ordersapi: orders.yaml bin/swagger
@@ -11,10 +11,10 @@ pkg/gen/ordersapi: orders.yaml bin/swagger
 orders.yaml:
 	curl -o $@ https://raw.githubusercontent.com/transcom/mymove/master/swagger/orders.yaml
 
-bin/swagger: vendor/github.com/go-swagger/go-swagger
-	go build -i -o bin/swagger ./vendor/github.com/go-swagger/go-swagger/cmd/swagger
+bin/swagger: vendor/github.com/go-swagger/go-swagger/cmd/swagger
+	go build -i -o $@ ./$<
 
-vendor/github.com/go-swagger/go-swagger:
+vendor/github.com/go-swagger/go-swagger/cmd/swagger:
 	dep ensure -vendor-only
 
 clean:
@@ -23,4 +23,4 @@ clean:
 	rm -Rf vendor
 	rm -Rf pkg/gen
 
-.PHONY: clean
+.PHONY: nom clean

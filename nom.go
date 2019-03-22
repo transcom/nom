@@ -12,20 +12,47 @@ import (
 	"strings"
 	"time"
 
+	runtimeClient "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/namsral/flag"
+	"github.com/transcom/nom/pkg/gen/ordersapi/client"
+	"github.com/transcom/nom/pkg/gen/ordersapi/client/operations"
 	"github.com/transcom/nom/pkg/gen/ordersapi/models"
 )
 
 var suffixes = []string{"JR", "SR", "II", "III", "IV", "V"}
 
 func main() {
-	inputPath := os.Args[1]
+	keyPath := flag.String("key", "", "Path to the client certificate's private key")
+	certPath := flag.String("cert", "", "Path to the client TLS Certificate")
+	host := flag.String("host", "orders.move.mil", "Host name to send the orders to")
+	port := flag.String("port", "443", "Remote port number to connect to")
+	insecure := flag.Bool("insecure", false, "Skip TLS verification and validation")
+
+	flag.Parse()
+
+	httpClient, err := runtimeClient.TLSClient(runtimeClient.TLSClientOptions{Key: *keyPath, Certificate: *certPath, InsecureSkipVerify: *insecure})
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	if len(flag.Args()) < 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+	inputPath := flag.Arg(0)
 	fileReader, err := os.Open(inputPath)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 	csvReader := csv.NewReader(fileReader)
+
+	hostWithPort := *host + ":" + *port
+	myRuntime := runtimeClient.NewWithClient(hostWithPort, client.DefaultBasePath, []string{"https"}, httpClient)
+	myRuntime.EnableConnectionReuse()
+	myRuntime.SetDebug(true)
 
 	// First line contains the column headers; make a hash table that keys on the header with the column index as the value
 	headers, err := csvReader.Read()
@@ -42,42 +69,36 @@ func main() {
 		fields[headers[i]] = i
 	}
 
-	// every subsequent line can now be picked apart using this information
-	for {
-		record, err := csvReader.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
-			os.Exit(1)
-		}
+	ordersGateway := client.New(myRuntime, nil)
 
+	// every subsequent line can now be picked apart using this information
+	for record, err := csvReader.Read(); err == nil; record, err = csvReader.Read() {
 		var rev models.Revision
 		rev.Member = new(models.Member)
 		rev.Member.Affiliation = models.AffiliationNavy
 		// The sailor's name, in the format LASTNAME,FIRSTNAME (optional MI) (optional suffix)
 		fullname := record[fields["Service Member Name"]]
 		names := strings.SplitN(fullname, ",", 2)
-		rev.Member.FamilyName = new(string)
-		*rev.Member.FamilyName = names[0]
+		rev.Member.FamilyName = names[0]
 		names = strings.Fields(names[1])
-		rev.Member.GivenName = new(string)
-		*rev.Member.GivenName = names[0]
+		rev.Member.GivenName = names[0]
 		if len(names) > 1 {
 			if stringInSlice(names[len(names)-1], suffixes) {
-				rev.Member.Suffix = names[len(names)-1]
+				rev.Member.Suffix = &names[len(names)-1]
 				if len(names) > 2 {
-					rev.Member.MiddleName = strings.Join(names[1:len(names)-1], " ")
+					middleName := strings.Join(names[1:len(names)-1], " ")
+					rev.Member.MiddleName = &middleName
 				}
 			} else {
-				rev.Member.MiddleName = strings.Join(names[1:], " ")
+				middleName := strings.Join(names[1:], " ")
+				rev.Member.MiddleName = &middleName
 			}
 		}
 
 		daysStarting31Dec1899, daysError := strconv.Atoi(record[fields["Order Create/Modification Date"]])
 		dateIssued := time.Date(1899, time.December, 30+daysStarting31Dec1899, 0, 0, 0, 0, time.Local)
-		rev.DateIssued = strfmt.DateTime(dateIssued)
+		fmtDateIssued := strfmt.DateTime(dateIssued)
+		rev.DateIssued = &fmtDateIssued
 
 		orderModNbr, orderModNbrErr := strconv.Atoi(record[fields["Order Modification Number"]])
 		if orderModNbrErr != nil {
@@ -87,15 +108,15 @@ func main() {
 		if obligModNbrErr != nil {
 			obligModNbr = 0
 		}
-		rev.SeqNum = new(int64)
-		*rev.SeqNum = int64(orderModNbr + obligModNbr)
+		seqNum := int64(orderModNbr + obligModNbr)
+		rev.SeqNum = &seqNum
 
 		if record[fields["Obligation Status Code"]] == "D" {
-			rev.Status = models.RevisionStatusCanceled
+			rev.Status = models.StatusCanceled
 		} else {
-			rev.Status = models.RevisionStatusAuthorized
+			rev.Status = models.StatusAuthorized
 		}
-		rev.Member.Title = record[fields["Rank Classification  Description"]]
+		rev.Member.Title = &record[fields["Rank Classification  Description"]]
 		categorizedRank := paygradeToRank[record[fields["Paygrade"]]]
 		rev.Member.Rank = categorizedRank.paygrade
 
@@ -108,19 +129,20 @@ func main() {
 
 		rev.LosingUnit = new(models.Unit)
 		if name := strings.TrimSpace(record[fields["Detach UIC Home Port"]]); len(name) > 0 {
-			rev.LosingUnit.Name = name
+			rev.LosingUnit.Name = &name
 		}
 		if uic := strings.TrimSpace(record[fields["Detach UIC"]]); len(uic) > 0 {
-			rev.LosingUnit.Uic = fmt.Sprintf("N%05s", uic)
+			fmtUIC := fmt.Sprintf("N%05s", uic)
+			rev.LosingUnit.Uic = &fmtUIC
 		}
 		if city := strings.TrimSpace(record[fields["Detach UIC City Name"]]); len(city) > 0 {
-			rev.LosingUnit.City = city
+			rev.LosingUnit.City = &city
 		}
 		if state := strings.TrimSpace(record[fields["Detach State Code"]]); len(state) > 0 {
-			rev.LosingUnit.Locality = state
+			rev.LosingUnit.Locality = &state
 		}
 		if country := strings.TrimSpace(record[fields["Detach Country Code"]]); len(country) > 0 {
-			rev.LosingUnit.Country = country
+			rev.LosingUnit.Country = &country
 		}
 
 		daysStarting31Dec1899, daysError = strconv.Atoi(record[fields["Ultimate Estimated Arrival Date"]])
@@ -132,19 +154,20 @@ func main() {
 
 		rev.GainingUnit = new(models.Unit)
 		if name := strings.TrimSpace(record[fields["Ultimate UIC Home Port"]]); len(name) > 0 {
-			rev.GainingUnit.Name = name
+			rev.GainingUnit.Name = &name
 		}
 		if uic := strings.TrimSpace(record[fields["Ultimate UIC"]]); len(uic) > 0 {
-			rev.GainingUnit.Uic = fmt.Sprintf("N%05s", uic)
+			fmtUIC := fmt.Sprintf("N%05s", uic)
+			rev.GainingUnit.Uic = &fmtUIC
 		}
 		if city := strings.TrimSpace(record[fields["Ultimate UIC City Name"]]); len(city) > 0 {
-			rev.GainingUnit.City = city
+			rev.GainingUnit.City = &city
 		}
 		if state := strings.TrimSpace(record[fields["Ultimate State Code"]]); len(state) > 0 {
-			rev.GainingUnit.Locality = state
+			rev.GainingUnit.Locality = &state
 		}
 		if country := strings.TrimSpace(record[fields["Ultimate Country Code"]]); len(country) > 0 {
-			rev.GainingUnit.Country = country
+			rev.GainingUnit.Country = &country
 		}
 
 		if record[fields["Entitlement Indicator"]] == "Y" {
@@ -161,7 +184,18 @@ func main() {
 		}
 
 		rev.PcsAccounting = new(models.Accounting)
-		rev.PcsAccounting.Tac = record[fields["TAC"]]
+		rev.PcsAccounting.Tac = &record[fields["TAC"]]
+
+		var params operations.PostRevisionParams
+		params.SetMemberID(record[fields["Ssn (obligation)"]])
+		params.SetOrdersNum(record[fields["Primary SDN"]])
+		params.SetIssuer(string(models.IssuerNavy))
+		params.SetRevision(&rev)
+		params.SetTimeout(time.Second * 10)
+		_, err = ordersGateway.Operations.PostRevision(&params)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		bodyBuf := &bytes.Buffer{}
 		encoder := json.NewEncoder(bodyBuf)
@@ -170,6 +204,12 @@ func main() {
 
 		fmt.Print(bodyBuf.String())
 	}
+
+	if err != nil && err != io.EOF {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
 }
 
 func stringInSlice(a string, list []string) bool {

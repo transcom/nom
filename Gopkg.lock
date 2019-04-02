@@ -221,6 +221,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:b39bad8820b5fa1a8e4a618cc9f3e74b72cd5ace3d3431d4c11aac20651f314b"
+  name = "github.com/miekg/pkcs11"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "074fd7a1ed1993670ce41e6256599452720b3177"
+
+[[projects]]
+  branch = "master"
   digest = "1:e730597b38a4d56e2361e0b6236cb800e52c73cace2ff91396f4ff35792ddfa7"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
@@ -287,12 +295,28 @@
   revision = "15738813a09db5c8e5b60a19d67d3f9bd38da3a4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:1e52cd770971c1f625650971d6c6f1f34669aa314e8dfd246fe3349b70a5304f"
+  name = "github.com/tcnksm/go-input"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "548a7d7a8ee8fcb3d013fae6acf857da56165975"
+
+[[projects]]
   digest = "1:e1cd343b3883ced86b6873fe4d2f76799259fba3d1656df6ac0a7fa92644c049"
   name = "github.com/toqueteos/webbrowser"
   packages = ["."]
   pruneopts = "UT"
   revision = "3232c91b8ede8ca86e8962981d881af78875542f"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  pruneopts = "UT"
+  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
 
 [[projects]]
   branch = "master"
@@ -308,9 +332,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:38838aa959fb66911fa66b3409d70a8dc17b45326259f3c792496d5ee2fdbef8"
+  digest = "1:c1fee1a2c739c7b220dc3de939f659dce271fa8d9de155cb8cfcfb99c941cbc3"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows",
+  ]
   pruneopts = "UT"
   revision = "c4afb3effaa53fd9a06ca61262dc7ce8df4c081b"
 
@@ -371,6 +398,33 @@
   pruneopts = "UT"
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
 
+[[projects]]
+  branch = "master"
+  digest = "1:4c488a98833b055c7f3ed830a19e9f94496da7198825a5dbfb91fb3733b96e2d"
+  name = "pault.ag/go/fasc"
+  packages = [
+    ".",
+    "internal/bdc",
+  ]
+  pruneopts = "UT"
+  revision = "38e8cd7ca983d5534b90c3d2da9db49a812970de"
+
+[[projects]]
+  branch = "master"
+  digest = "1:244bbc8eb89450ea33fa70974673fbe44ca710580b609aae60650e43888fd48f"
+  name = "pault.ag/go/othername"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "859caba4369b4a71f175bc89f2b48d0672f44b32"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d33d0f2893ab2fbc1fac43857c8ccc31f73b9f0026224bea8bb7fd7c94eae00c"
+  name = "pault.ag/go/piv"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d9d61c70919c9136556920a9a728c3728038fec2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -382,8 +436,11 @@
     "github.com/go-openapi/swag",
     "github.com/go-openapi/validate",
     "github.com/go-swagger/go-swagger/cmd/swagger",
+    "github.com/miekg/pkcs11",
     "github.com/namsral/flag",
+    "github.com/tcnksm/go-input",
     "golang.org/x/net/context",
+    "pault.ag/go/piv",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

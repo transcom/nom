@@ -2,12 +2,16 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,26 +19,117 @@ import (
 	runtimeClient "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/namsral/flag"
+	"github.com/tcnksm/go-input"
 	"github.com/transcom/nom/pkg/gen/ordersapi/client"
 	"github.com/transcom/nom/pkg/gen/ordersapi/client/operations"
 	"github.com/transcom/nom/pkg/gen/ordersapi/models"
+	"github.com/transcom/nom/pkg/pkcs11"
 )
 
 var suffixes = []string{"JR", "SR", "II", "III", "IV", "V"}
 
 func main() {
-	keyPath := flag.String("key", "", "Path to the client certificate's private key")
-	certPath := flag.String("cert", "", "Path to the client TLS Certificate")
-	host := flag.String("host", "orders.move.mil", "Host name to send the orders to")
-	port := flag.String("port", "443", "Remote port number to connect to")
-	insecure := flag.Bool("insecure", false, "Skip TLS verification and validation")
+	var (
+		pkcs11ModulePath string
+		tokenLabel       string
+		certLabel        string
+		keyLabel         string
+		keyPath          string
+		certPath         string
+		host             string
+		port             uint
+		insecure         bool
+	)
+	flag.StringVar(&pkcs11ModulePath, "pkcs11module", "", "Smart card: Path to the PKCS11 module to use")
+	flag.StringVar(&tokenLabel, "tokenlabel", "", "Smart card: name of the token to use")
+	flag.StringVar(&certLabel, "certlabel", "Certificate for PIV Authentication", "Smart card: label of the public cert")
+	flag.StringVar(&keyLabel, "keylabel", "PIV AUTH key", "Smart card: label of the private key")
+	flag.StringVar(&keyPath, "key", "", "Certificate from file: Path to the client certificate's private key")
+	flag.StringVar(&certPath, "cert", "", "Certificate from file: Path to the client TLS Certificate")
+	flag.StringVar(&host, "host", "orders.move.mil", "Host name to send the orders to")
+	flag.UintVar(&port, "port", 443, "Remote port number to connect to")
+	flag.BoolVar(&insecure, "insecure", false, "Skip TLS verification and validation")
 
 	flag.Parse()
 
-	httpClient, err := runtimeClient.TLSClient(runtimeClient.TLSClientOptions{Key: *keyPath, Certificate: *certPath, InsecureSkipVerify: *insecure})
+	var httpClient *http.Client
+	var err error
+
+	// The client certificate comes either from a file OR from a smart card
+	if pkcs11ModulePath != "" {
+		pkcsConfig := pkcs11.Config{
+			Module:           pkcs11ModulePath,
+			CertificateLabel: certLabel,
+			PrivateKeyLabel:  keyLabel,
+			TokenLabel:       tokenLabel,
+		}
+
+		store, err := pkcs11.New(pkcsConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer store.Close()
+
+		inputUI := &input.UI{
+			Writer: os.Stdout,
+			Reader: os.Stdin,
+		}
+
+		pin, err := inputUI.Ask("PIN", &input.Options{
+			Default:     "",
+			HideOrder:   true,
+			HideDefault: true,
+			Required:    true,
+			Loop:        true,
+			Mask:        true,
+			ValidateFunc: func(input string) error {
+				matched, err := regexp.Match("^\\d+$", []byte(input))
+				if err != nil {
+					return err
+				}
+				if !matched {
+					return errors.New("Invalid")
+				}
+				return nil
+			},
+		})
+		if err != nil {
+			os.Exit(1)
+		}
+
+		err = store.Login(pin)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cert, err := store.TLSCertificate()
+		if err != nil {
+			panic(err)
+		}
+		tlsConfig := &tls.Config{
+			Certificates:       []tls.Certificate{*cert},
+			InsecureSkipVerify: insecure,
+		}
+		tlsConfig.BuildNameToCertificate()
+		transport := &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+		httpClient = &http.Client{
+			Transport: transport,
+		}
+		//cert, err := store.LoadCertificate()
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+
+		//httpClient, err = runtimeClient.TLSClient(runtimeClient.TLSClientOptions{LoadedCertificate: cert.Certificate, LoadedKey: store, InsecureSkipVerify: insecure})
+
+	} else {
+		httpClient, err = runtimeClient.TLSClient(runtimeClient.TLSClientOptions{Key: keyPath, Certificate: certPath, InsecureSkipVerify: insecure})
+	}
+
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 	if len(flag.Args()) < 1 {
@@ -45,11 +140,10 @@ func main() {
 	fileReader, err := os.Open(inputPath)
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 	csvReader := csv.NewReader(fileReader)
 
-	hostWithPort := *host + ":" + *port
+	hostWithPort := fmt.Sprintf("%s:%d", host, port)
 	myRuntime := runtimeClient.NewWithClient(hostWithPort, client.DefaultBasePath, []string{"https"}, httpClient)
 	myRuntime.EnableConnectionReuse()
 	myRuntime.SetDebug(true)
@@ -62,7 +156,6 @@ func main() {
 		} else {
 			log.Fatal(err)
 		}
-		os.Exit(1)
 	}
 	fields := make(map[string]int)
 	for i := 0; i < len(headers); i++ {
@@ -207,7 +300,6 @@ func main() {
 
 	if err != nil && err != io.EOF {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 }

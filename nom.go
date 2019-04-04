@@ -117,13 +117,6 @@ func main() {
 		httpClient = &http.Client{
 			Transport: transport,
 		}
-		//cert, err := store.LoadCertificate()
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
-
-		//httpClient, err = runtimeClient.TLSClient(runtimeClient.TLSClientOptions{LoadedCertificate: cert.Certificate, LoadedKey: store, InsecureSkipVerify: insecure})
-
 	} else {
 		httpClient, err = runtimeClient.TLSClient(runtimeClient.TLSClientOptions{Key: keyPath, Certificate: certPath, InsecureSkipVerify: insecure})
 	}
@@ -284,7 +277,7 @@ func main() {
 		params.SetOrdersNum(record[fields["Primary SDN"]])
 		params.SetIssuer(string(models.IssuerNavy))
 		params.SetRevision(&rev)
-		params.SetTimeout(time.Second * 10)
+		params.SetTimeout(time.Second * 30)
 		_, err = ordersGateway.Operations.PostRevision(&params)
 		if err != nil {
 			log.Fatal(err)

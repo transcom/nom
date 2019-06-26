@@ -20,6 +20,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/namsral/flag"
 	"github.com/tcnksm/go-input"
+
 	"github.com/transcom/nom/pkg/gen/ordersapi/client"
 	"github.com/transcom/nom/pkg/gen/ordersapi/client/operations"
 	"github.com/transcom/nom/pkg/gen/ordersapi/models"
@@ -53,7 +54,6 @@ func main() {
 	flag.Parse()
 
 	var httpClient *http.Client
-	var err error
 
 	// The client certificate comes either from a file OR from a smart card
 	if pkcs11ModulePath != "" {
@@ -83,9 +83,9 @@ func main() {
 			Loop:        true,
 			Mask:        true,
 			ValidateFunc: func(input string) error {
-				matched, err := regexp.Match("^\\d+$", []byte(input))
-				if err != nil {
-					return err
+				matched, matchErr := regexp.Match("^\\d+$", []byte(input))
+				if matchErr != nil {
+					return matchErr
 				}
 				if !matched {
 					return errors.New("Invalid")
@@ -106,6 +106,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		// #nosec b/c gosec triggers on InsecureSkipVerify
 		tlsConfig := &tls.Config{
 			Certificates:       []tls.Certificate{*cert},
 			InsecureSkipVerify: insecure,
@@ -118,11 +119,11 @@ func main() {
 			Transport: transport,
 		}
 	} else {
+		var err error
 		httpClient, err = runtimeClient.TLSClient(runtimeClient.TLSClientOptions{Key: keyPath, Certificate: certPath, InsecureSkipVerify: insecure})
-	}
-
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if len(flag.Args()) < 1 {
@@ -158,7 +159,7 @@ func main() {
 	ordersGateway := client.New(myRuntime, nil)
 
 	// every subsequent line can now be picked apart using this information
-	for record, err := csvReader.Read(); err == nil; record, err = csvReader.Read() {
+	for record, recordErr := csvReader.Read(); recordErr == nil; record, recordErr = csvReader.Read() {
 		var rev models.Revision
 		rev.Member = new(models.Member)
 		rev.Member.Affiliation = models.AffiliationNavy
@@ -181,7 +182,7 @@ func main() {
 			}
 		}
 
-		daysStarting31Dec1899, daysError := strconv.Atoi(record[fields["Order Create/Modification Date"]])
+		daysStarting31Dec1899, _ := strconv.Atoi(record[fields["Order Create/Modification Date"]])
 		dateIssued := time.Date(1899, time.December, 30+daysStarting31Dec1899, 0, 0, 0, 0, time.Local)
 		fmtDateIssued := strfmt.DateTime(dateIssued)
 		rev.DateIssued = &fmtDateIssued
@@ -231,7 +232,7 @@ func main() {
 			rev.LosingUnit.Country = &country
 		}
 
-		daysStarting31Dec1899, daysError = strconv.Atoi(record[fields["Ultimate Estimated Arrival Date"]])
+		daysStarting31Dec1899, daysError := strconv.Atoi(record[fields["Ultimate Estimated Arrival Date"]])
 		if daysError == nil {
 			estArrivalDate := time.Date(1899, time.December, 30+daysStarting31Dec1899, 0, 0, 0, 0, time.Local)
 			rev.ReportNoLaterThan = new(strfmt.Date)
@@ -286,7 +287,10 @@ func main() {
 		bodyBuf := &bytes.Buffer{}
 		encoder := json.NewEncoder(bodyBuf)
 		encoder.SetIndent("", "  ")
-		encoder.Encode(rev)
+		encoderErr := encoder.Encode(rev)
+		if encoderErr != nil {
+			log.Fatal(err)
+		}
 
 		fmt.Print(bodyBuf.String())
 	}

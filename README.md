@@ -17,7 +17,6 @@ Building is easy! Once you have the dependencies, run
 **nom** is written in [Go](https://golang.org/). Aside from go, you will need:
 
 - [GNU Make](https://www.gnu.org/software/make/)
-- [dep](https://golang.github.io/dep/)
 - [curl](https://curl.haxx.se/)
 
 Acquiring and installing these is left as an exercise for the reader.

@@ -16,10 +16,11 @@
 # Debug binary
 debug
 
-# VS Code project info
+# Editors
+.swp
 .vscode
+
+# Makefile
 pkg/gen
-swagger
+bin/
 orders.yaml
-nom
-vendor

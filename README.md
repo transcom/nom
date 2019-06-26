@@ -2,17 +2,17 @@
 
 **nom**, the Navy Orders Muncher, ingests CSV files containing Navy Orders and excretes database updates to the move.mil Orders API.
 
-# Usage
+## Usage
 
 `$ nom <csv input file>`
 
-# Building
+## Building
 
 Building is easy! Once you have the dependencies, run
 
 `$ make`
 
-## Dependencies
+### Dependencies
 
 **nom** is written in [Go](https://golang.org/). Aside from go, you will need:
 
@@ -21,7 +21,7 @@ Building is easy! Once you have the dependencies, run
 
 Acquiring and installing these is left as an exercise for the reader.
 
-# Input format
+## Input format
 
 **nom** accepts comma-delimited CSV files and expects the following columns:
 
@@ -44,7 +44,7 @@ Acquiring and installing these is left as an exercise for the reader.
 | Detach State Code | Detaching activity state |
 | Detach Country Code | Detaching activity country |
 | Ultimate Estimated Arrival Date | Report No Later Than Date |
-| Ultimate UIC	| Unit Identification Code (UIC) of the ultimate activity |
+| Ultimate UIC | Unit Identification Code (UIC) of the ultimate activity |
 | Ultimate UIC Home Port | Home port of the ultimate activity |
 | Ultimate UIC City Name | Ultimate activity city |
 | Ultimate State Code | Ultimate activity state |
@@ -56,17 +56,20 @@ Acquiring and installing these is left as an exercise for the reader.
 
 Columns that do not start with the above headers are ignored.
 
-## Orders number
+### Orders number
+
 On printed Navy Orders, the BUPERS Orders number is originally formatted as "`<Order Control Number> <SSN>`", for example, "`3108 000-12-3456`". It would be unique (because of the SSN), except that it’s possible for a set of orders to be cut on the same day 10 years later for the same sailor, resulting in a collision.
 
 Because the BUPERS Orders Number contains PII (the SSN) and could potentially not be unique (because it only allows a single digit for the year), **nom** uses the Primary SDN (aka the Commercial Travel SDN) instead. For what it's worth, Marine Corps orders also use the CT SDN as the unique Orders number.
 
-## Modification number interpretation
+### Modification number interpretation
+
 The Orders API has a sequence number to indicate the chronology of amendments to a set of Orders. The input, however, has two modification number fields, which track the modification count from different systems. Fortunately, these two fields increment atomically, and never decrement.
 
 Therefore, the sequence number is simply the sum of these two numbers.
 
-## Orders type
+### Orders type
+
 To determine the effective orders type, lookup the CIC Purpose Information Code and community (enlisted or officer) in the following table.
 
 | N_CIC_PURP | Enlisted / Officer | Description | Effective Orders Type |
@@ -109,5 +112,6 @@ To determine the effective orders type, lookup the CIC Purpose Information Code 
 | Y | Enlisted | Misc. Rotational Non-member | rotational |
 | Z | Enlisted | NAVCAD(Naval Cadet) Separation | separation |
 
-# Output
+## Output
+
 nom uploads the Orders it reads to the move.mil Orders API.

@@ -11,8 +11,8 @@ repos:
     hooks:
       - id: golangci-lint
 
-  # - repo: git://github.com/igorshubovych/markdownlint-cli
-  #   rev: v0.17.0
-  #   hooks:
-  #     - id: markdownlint
-  #       entry: markdownlint --ignore .github/*.md
+  - repo: git://github.com/igorshubovych/markdownlint-cli
+    rev: v0.17.0
+    hooks:
+      - id: markdownlint
+        entry: markdownlint --ignore .github/*.md

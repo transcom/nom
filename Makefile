@@ -14,6 +14,14 @@ orders.yaml:
 bin/swagger:
 	go build -o bin/swagger github.com/go-swagger/go-swagger/cmd/swagger
 
+# This target ensures that the pre-commit hook is installed and kept up to date
+# if pre-commit updates.
+.PHONY: ensure_pre_commit
+ensure_pre_commit: .git/hooks/pre-commit ## Ensure pre-commit is installed
+.git/hooks/pre-commit: /usr/local/bin/pre-commit
+	pre-commit install
+	pre-commit install-hooks
+
 .PHONY: clean
 clean:
 	rm -rf bin/

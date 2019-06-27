@@ -22,6 +22,12 @@ ensure_pre_commit: .git/hooks/pre-commit ## Ensure pre-commit is installed
 	pre-commit install
 	pre-commit install-hooks
 
+.PHONY: go_deps
+go_deps: .go_deps.stamp ## Install Go dependencies
+.go_deps.stamp: go.mod
+	go mod tidy
+	touch .go_deps.stamp
+
 .PHONY: clean
 clean:
 	rm -rf bin/

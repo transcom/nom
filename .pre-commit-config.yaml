@@ -1,18 +1,18 @@
 repos:
   - repo: git://github.com/pre-commit/pre-commit-hooks
-    rev: v2.2.3
+    rev: v2.4.0
     hooks:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: trailing-whitespace
 
   - repo: git://github.com/golangci/golangci-lint
-    rev: v1.17.1
+    rev: v1.23.1
     hooks:
       - id: golangci-lint
 
   - repo: git://github.com/igorshubovych/markdownlint-cli
-    rev: v0.17.0
+    rev: v0.21.0
     hooks:
       - id: markdownlint
         entry: markdownlint --ignore .github/*.md

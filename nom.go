@@ -20,11 +20,11 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/namsral/flag"
 	"github.com/tcnksm/go-input"
+	"pault.ag/go/pksigner"
 
 	"github.com/transcom/nom/pkg/gen/ordersapi/client"
 	"github.com/transcom/nom/pkg/gen/ordersapi/client/operations"
 	"github.com/transcom/nom/pkg/gen/ordersapi/models"
-	"github.com/transcom/nom/pkg/pkcs11"
 )
 
 var suffixes = []string{"JR", "SR", "II", "III", "IV", "V"}
@@ -57,14 +57,14 @@ func main() {
 
 	// The client certificate comes either from a file OR from a smart card
 	if pkcs11ModulePath != "" {
-		pkcsConfig := pkcs11.Config{
+		pkcsConfig := pksigner.Config{
 			Module:           pkcs11ModulePath,
 			CertificateLabel: certLabel,
 			PrivateKeyLabel:  keyLabel,
 			TokenLabel:       tokenLabel,
 		}
 
-		store, err := pkcs11.New(pkcsConfig)
+		store, err := pksigner.New(pkcsConfig)
 		if err != nil {
 			log.Fatal(err)
 		}

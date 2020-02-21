@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -68,7 +69,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer store.Close()
+		defer func() {
+			errClose := store.Close()
+			if errClose != nil {
+				log.Fatal(errClose)
+			}
+		}()
 
 		inputUI := &input.UI{
 			Writer: os.Stdout,
@@ -133,7 +139,7 @@ func main() {
 		os.Exit(1)
 	}
 	inputPath := flag.Arg(0)
-	fileReader, err := os.Open(inputPath)
+	fileReader, err := os.Open(filepath.Clean(inputPath))
 	if err != nil {
 		log.Fatal(err)
 	}

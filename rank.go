@@ -4,6 +4,7 @@ import (
 	"github.com/transcom/nom/pkg/gen/ordersapi/models"
 )
 
+// CategorizedRank combines officer status and paygrade
 type CategorizedRank struct {
 	officer  bool
 	paygrade models.Rank

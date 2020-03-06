@@ -24,3 +24,6 @@ debug
 pkg/gen
 bin/
 orders.yaml
+
+# CSV Files for testing
+*.csv

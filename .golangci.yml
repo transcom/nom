@@ -1,13 +1,6 @@
 linters-settings:
   govet:
     check-shadowing: true
-    settings:
-      printf:
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
@@ -15,30 +8,34 @@ linters-settings:
 
 linters:
   enable:
-    - gosec
-    - govet
     - deadcode
     - errcheck
-    - gosimple
+    - gofmt
+    - goimports
+    - golint
+    - gosec
+    - govet
     - ineffassign
     - staticcheck
     - structcheck
     - typecheck
     - varcheck
-    - goimports
-    - gofmt
-    - golint
   disable:
+    - gosimple #deprecated https://github.com/golangci/golangci-lint/issues/357
     - unused #deprecated https://github.com/dominikh/go-tools/tree/master/cmd/unused
+  fast: false
 
 issues:
-  exclude-rules:
-    - path: pkg/pkcs11/pkcs11.go
-      linters:
-        - deadcode
+  # Disable defaults for the exclude patterns and instead list them all out
+  # TODO: Slowly remove these where they make sense and fix code
+  exclude-use-default: false
+  exclude:
+    # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    # - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
   fix: true
 
 run:
   # which dirs to skip: they won't be analyzed;
   skip-dirs:
     - pkg/gen
+  modules-download-mode: readonly

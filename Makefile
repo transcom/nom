@@ -28,6 +28,10 @@ go_deps: .go_deps.stamp ## Install Go dependencies
 	go mod tidy
 	touch .go_deps.stamp
 
+.PHONY: test
+test: bin/nom
+	go test ./...
+
 .PHONY: clean
 clean:
 	rm -rf bin/

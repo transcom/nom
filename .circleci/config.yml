@@ -33,6 +33,7 @@ jobs:
       - run: echo 'export GOPATH=~/go' >> $BASH_ENV
       - run: echo 'export GOBIN=${GOPATH}/bin' >> $BASH_ENV
       - run: echo 'export PATH=${GOBIN}:${PATH}' >> $BASH_ENV
+      - run: make pkg/gen/ordersapi
       - run: make go_deps
       - save_cache:
           key: go-sum-v1-{{ checksum "go.sum" }}
@@ -90,8 +91,7 @@ jobs:
       - run: echo 'export GOPATH=~/go' >> $BASH_ENV
       - run: echo 'export GOBIN=${GOPATH}/bin' >> $BASH_ENV
       - run: echo 'export PATH=${GOBIN}:${PATH}' >> $BASH_ENV
-      - run: make bin/nom
-      - run: go test ./...
+      - run: make test
 
 workflows:
   version: 2

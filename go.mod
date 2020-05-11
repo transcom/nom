@@ -1,6 +1,6 @@
 module github.com/transcom/nom
 
-go 1.12
+go 1.14
 
 require (
 	github.com/go-openapi/errors v0.19.4

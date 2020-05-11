@@ -29,13 +29,15 @@ issues:
   # Disable defaults for the exclude patterns and instead list them all out
   # TODO: Slowly remove these where they make sense and fix code
   exclude-use-default: false
-  exclude:
-    # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
-    # - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
   fix: true
 
 run:
-  # which dirs to skip: they won't be analyzed;
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  deadline: 8m
+  concurrency: 1
+  issues-exit-code: 1
+  tests: true
   skip-dirs:
     - pkg/gen
+  skip-dirs-use-default: true
   modules-download-mode: readonly

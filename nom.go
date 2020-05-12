@@ -112,6 +112,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		// must explicitly state what signature algorithms we allow as of Go 1.14 to disable RSA-PSS signatures
+		cert.SupportedSignatureAlgorithms = []tls.SignatureScheme{tls.PKCS1WithSHA256}
+
 		// #nosec b/c gosec triggers on InsecureSkipVerify
 		tlsConfig := &tls.Config{
 			Certificates:       []tls.Certificate{*cert},
@@ -119,7 +123,6 @@ func main() {
 			MinVersion:         tls.VersionTLS12,
 			MaxVersion:         tls.VersionTLS12,
 		}
-		tlsConfig.BuildNameToCertificate()
 		transport := &http.Transport{
 			TLSClientConfig: tlsConfig,
 		}

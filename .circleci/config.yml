@@ -9,12 +9,16 @@
 
 version: "2.1"
 
+# References for variables shared across the file
+references:
+  circleci-docker: &circleci-docker milmove/circleci-docker:milmove-orders-53527078eb46159bfb84aeb9a194f50c590e4899
+
 executors:
   # Uses the `trussworks/circleci-docker-primary` docker image
   primary:
     resource_class: small
     docker:
-      - image: trussworks/circleci-docker-primary:a1006bfda60d05876196f03119898777542529d5
+      - image: *circleci-docker
 
 jobs:
 
@@ -29,6 +33,7 @@ jobs:
       - run: echo 'export GOPATH=~/go' >> $BASH_ENV
       - run: echo 'export GOBIN=${GOPATH}/bin' >> $BASH_ENV
       - run: echo 'export PATH=${GOBIN}:${PATH}' >> $BASH_ENV
+      - run: make pkg/gen/ordersapi
       - run: make go_deps
       - save_cache:
           key: go-sum-v1-{{ checksum "go.sum" }}
@@ -41,7 +46,6 @@ jobs:
     executor: primary
     steps:
       - checkout
-
       - restore_cache:
           keys:
             - pre-commit-dot-cache-{{ checksum ".pre-commit-config.yaml" }}
@@ -87,8 +91,7 @@ jobs:
       - run: echo 'export GOPATH=~/go' >> $BASH_ENV
       - run: echo 'export GOBIN=${GOPATH}/bin' >> $BASH_ENV
       - run: echo 'export PATH=${GOBIN}:${PATH}' >> $BASH_ENV
-      - run: make bin/nom
-      - run: go test ./...
+      - run: make test
 
 workflows:
   version: 2
